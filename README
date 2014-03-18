@@ -1,0 +1,34 @@
+====================================================================================================
+prm2gmx
+====================================================================================================
+
+prm2gmx converts the data from the Marchi Forcefield (2002) for BChl into a gromacs-compatible style.
+
+
+
+How to use
+====================================================================================================
+
+Putting new atomtypes into gromacs is not a trivial procedure. Because the data is provided in a more
+generic format (i.e. in a format of atomtypes, bonded names, and bond descriptions), the data must be
+run through pdb2gmx to generate a self-sufficient .itp file.
+
+The most successful procedure is probably to create a complete set of forcefield files in a single
+directory (without modifying an existing forcefield) to allow pdb2gmx to generate an .itp file for 
+the molecule. Alternatively, the parameters can be added to an existing forcefield, and the entire
+macromolecule can be run through pdb2gmx to generate the .itp files on the fly.
+
+There are several files which must be modified to successfully generate the topology with pdb2gmx:
+    1) atomtypes.atm - Atom types (of any length), with masses
+    2) ffbonded.itp - Valence bond parameters between atomtypes for generic ff generation (bond, 
+        angle, dihedral, and improper dihedral)
+    3) ffnonbonded.itp - Non-bonded parameters for atomtypes in atomtypes.atm (atomic number, 
+        mass, default charge (conventionally zero), sigma, and epsilon
+    4) bcl.rtp - Describes the map from redundant atomtypes to unique atomnames in residue [BCL], 
+        the charges and charge groups, then specifies the bonds, angles, dihedrals, and impropers 
+        topology for the molecule
+    5) bcl.hdb - Describes the location of hydrogens for pdb2gmx to generate and their proper
+        structure. (I think that ambertools can do this automatically, though...)
+
+Using these, it should be possible to successfully run pdb2gmx and generate a .itp file for BCL,
+which can then be updated to include type A and type B charge densities for free-energy calculations.
