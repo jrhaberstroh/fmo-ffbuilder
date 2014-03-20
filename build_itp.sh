@@ -17,14 +17,15 @@ python prm2gmx.py
 
 
 # ============BUILD FMO TOPOLOGY====================
-if [ -e testdir ]; then
-    rm -r testdir
+if [ -e mddir ]; then
+    rm -r mddir
 fi
-mkdir testdir
-cp -r dat/amber99sb-ildn.ff testdir/ambermod.ff
+mkdir mddir
+cp -r dat/amber99sb-ildn.ff mddir/ambermod.ff
 
-tail -n+30 output.ff/bcl.rtp >> testdir/ambermod.ff/aminoacids.rtp
-cat output.ff/atomtypes.atp >> testdir/ambermod.ff/atomtypes.atp
-cat output.ff/ffbonded.atp >> testdir/ambermod.ff/ffbonded.atp
-cd testdir
-pdb2gmx -f ../dat/4BCL.pdb -ff ambermod -chainsep id_and_ter -water tip3p
+tail -n+30 output.ff/bcl.rtp >> mddir/ambermod.ff/aminoacids.rtp
+cat output.ff/atomtypes.atp >> mddir/ambermod.ff/atomtypes.atp
+cat output.ff/ffbonded.atp >> mddir/ambermod.ff/ffbonded.atp
+cat dat/bchl.hdb >> mddir/ambermod.ff/aminoacids.hdb
+cd mddir
+pdb2gmx -f ../dat/pdb/4BCL_FIX.pdb -ff ambermod -chainsep id_and_ter -water tip3p
