@@ -46,6 +46,7 @@ mass2num = { "1.008"  : 1, \
 	     "14.010" : 7, \
 	     "15.999" : 8, \
 	     "16.000" : 8, \
+	     "16.00000" : 8, \
 	     "19.000" : 9, \
 	     "22.990" : 11,\
 	     "24.305" : 12,\
@@ -53,7 +54,9 @@ mass2num = { "1.008"  : 1, \
 	     '32.060' : 16,\
 	     '35.450' : 17,\
 	     "39.100" : 19,\
+	     "40.080" : 20,\
 	     "55.847" : 26,\
+	     "63.550" : 29,\
 	     "85.470" : 37,\
 	     "126.900": 53,\
 	     "131.000": 54,\
@@ -153,15 +156,20 @@ def generic_line(line_arr, entries_per_line, order, units, datatype=None, precis
 
     for i in xrange(len(order)):
         offset = entries_per_line
-        val = datatype[i](float(line_arr[offset + order[i]]) * units[i])
+        if datatype[i] == str:
+            val = datatype[i](line_arr[offset +order[i]])
+        else:
+            val = datatype[i](float(line_arr[offset + order[i]]) * units[i])
+            if val < 0:
+                sign_char = 1
+            if not ((abs(val) < float("1"+"0"*(precision-sign_char)) \
+                     and abs(val) >= float("."+"0"*(precision-sign_char)+"1")\
+                     ) or val == 0):
+                raise RuntimeError("Quantity too large or too small (but non-zero) appeared (has more than "+str(precision)+" chars): "+str(val)+"\n\tline = "+" ".join(line_arr))
         # Check that there are no more than 5 chars to display
-        if val < 0:
-            sign_char = 1
-        if not ((abs(val) < float("1"+"0"*(precision-sign_char)) and abs(val) >= float("."+"0"*(precision-sign_char)+"1"))\
-                or val == 0):
-            raise RuntimeError("Quantity too large or too small (but non-zero) appeared (has more than "+str(precision)+" chars): "+str(val)+"\n\tline = "+" ".join(line_arr))
-        val = str((val))
-        val = val[0:min(precision, len(val))]
+        val_full = str((val))
+        val = val_full[0:min(precision, len(val_full))]
+
         if niceformat:
             line_out = set_pos(line_out, peak_pos + column_spacing*spacer_index)
             spacer_index += 1
@@ -173,37 +181,80 @@ def generic_line(line_arr, entries_per_line, order, units, datatype=None, precis
 
 
 def bondline(line_in, precision = 6):
-    return generic_line(line_in.split(), 2, [1,0], [1, kCal2kJ * nm2A**2], precision = precision);
+    line_arr = line_in.split() + [1] # Harmonic bond FF type parameter for GROMACS
+       #  type  bondlen theta
+    order = [2,    1,    0]
+    conv =  [1, 1./nm2A, kCal2kJ * nm2A**2]
+    types = [int, float, float]
+    return generic_line(line_arr, 2, order, conv, types, precision = precision);
 
 def bendline(line_in, precision = 6):
-    return generic_line(line_in.split(), 3, [1,0], [1.,kCal2kJ], precision = precision);
+    line_arr = line_in.split() + [1] # Harmonic angle FF type parameter for GROMACS
+       #  type   theta    force    
+    order = [2,    1,       0]
+    conv =  [1.,   1.,  kCal2kJ]
+    types = [int,  float, float]
+    return generic_line(line_arr, 3, order, conv, types, precision = precision);
 
-def torsionline(line_in, precision = 6):
-    order = [2,0,1]
-    units = [1., kCal2kJ, 1]
-    datatype = [float, float, int]
-    entries_per_line = 4;
-    force_pos = entries_per_line
-    line_arr = line_in.split()
 
+def append_phase(line_arr):
     # Append the default angle value if the angle is missing
     # Also, convert the force to a positive number.
+    entries_per_line = 4;
+    force_pos = 4;
+
     if float(line_arr[force_pos]) < 0:
         if len(line_arr) == (entries_per_line + 3):
-            return "FAIL"
+            return False
     if len(line_arr) == (entries_per_line + 3) - 1:
        line_arr.append(0. if (float(line_arr[force_pos]) < 0) else 180.);
     line_arr[force_pos] = str(abs(float(line_arr[force_pos])))
     assert (len(line_arr) == (entries_per_line + 3))
+    return True
+
+def torsionline(line_in, precision = 6, improper = False):
+    line_arr = line_in.split() 
+    append_success = append_phase(line_arr)
+    if not append_success:
+        return "FAIL"
+    if improper:
+        line_arr += [4] # Periodic improper dihedral FF type parameter for GROMACS
+    else:
+        line_arr += [9] # Periodic proper dihedral FF type parameter for GROMACS
+
+           #  type phase  force    nw
+    order =    [3,   2,     0,       1]
+    units =    [1,   1.,    kCal2kJ, 1]
+    datatype = [int, float, float, int]
+    entries_per_line = 4;
+
+    # Append the default angle value if the angle is missing
+    # Also, convert the force to a positive number.
+    #if float(line_arr[force_pos]) < 0:
+    #    if len(line_arr) == (entries_per_line + 3):
+    #        return "FAIL"
+    #if len(line_arr) == (entries_per_line + 3) - 1:
+    #   line_arr.append(0. if (float(line_arr[force_pos]) < 0) else 180.);
+    #line_arr[force_pos] = str(abs(float(line_arr[force_pos])))
+    #assert (len(line_arr) == (entries_per_line + 3))
+
 
     return generic_line(line_arr, 4, order, units, datatype, precision = precision)
 
 def improperline(line_in, precision = 6):
-    return torsionline(" ".join(line_in.split()[0:-1]), precision = precision)
+    return torsionline(" ".join(line_in.split()[0:-1]), precision = precision, improper = True)
 
+def chargeline(line_in, group, precision = 6):
+    return generic_line(line_in.split()+[str(group)], 2, [0, 1], [1., 1.], [float, int], precision=precision)
 
-def chargeline(line_in, precision = 6):
-    return generic_line(line_in.split(), 2, [0], [1.], precision=precision)
+def nonbondedline(line_in, precision = 6):
+    order =    [2,    3,     4,     5,    0,     1]
+    units =    [1.  , 1.,    1.,    1.,  .01782, kCal2kJ]
+    datatype = [int , float, float, str, float, float]
+    dat_arr = line_in.split()
+    dat_arr = dat_arr[0:3] + [str(mass2num[dat_arr[-1]]), dat_arr[-1], '0.000', 'A']
+    return generic_line(dat_arr, 1, order, units, datatype, precision=precision)
+
 
 def manageprmlines(line, mode, precision = 7):
     line = line.strip()
@@ -218,15 +269,15 @@ def manageprmlines(line, mode, precision = 7):
     elif (mode == None):
         mode = line
         if   (mode == "BOND"):
-            newline = "[bondtypes]"
+            newline = "[bondtypes]\n; A B bond.type  spring  bondlen  (kJ, nm)" 
         elif (mode == "BENDINGS"):
-            newline = "[angletypes]"
+            newline = "[angletypes]\n; A B C bond.type  spring   angle (kJ, nm)"
         elif (mode == "TORSION PROPER"):
-            newline = "[dihedraltypes]"
+            newline = "[dihedraltypes]\n; A B C D  dihed.type  phase  ampl  freq (kJ, nm)"
         elif (mode == "TORSION IMPROPER"):
-            newline = "[dihedraltypes]"
+            newline = "[dihedraltypes]\n; A B C D  dihed.type  phase  ampl  freq (kJ, nm)"
         elif (mode == "NONBONDED MIXRULE"):
-            newline = "SKIPPED"
+            newline = "[ atomtypes ]\n; name at.num mass charge ptype sigma epsilon (kJ, nm)"
         else:
             raise RuntimeError("No acceptable mode active. \n\tmode = "+str(mode))
    
@@ -239,7 +290,7 @@ def manageprmlines(line, mode, precision = 7):
     elif (mode == "TORSION IMPROPER"):
         newline =  improperline(line, precision)
     elif (mode == "NONBONDED MIXRULE"):
-        newline = "VDW SKIPPED"
+        newline =  nonbondedline(line, precision)
 
     else:
         raise RuntimeError("No acceptable active mode or line data.\n\tmode = "+str(mode)+"\n\tline = "+line)
@@ -287,12 +338,10 @@ def managetpglines(line, mode, group = None, precision = 7):
         if line == "group":
             group += 1 
         else:
-            newline = chargeline(line, precision) 
+            newline = chargeline(line, group, precision) 
             if newline == None:
                 print "BAD PROGRAM, SAD PROGRAM"
                 print line
-            else:
-                newline = set_pos(newline,40)+str(group)
     elif mode == "bonds":
         newline = line.upper()
     elif mode == "imphd":
@@ -348,15 +397,15 @@ def generate_ffbonded(prm_filename):
     ffbonded = ManageFFFiles(prm_filename, FileType.PRM, fields)
     return ffbonded
 
+def generate_ffnonbonded(prm_filename):
+    fields = set(["NONBONDED MIXRULE"])
+    ffnonbonded = ManageFFFiles(prm_filename, FileType.PRM, fields)
+    return ffnonbonded
 
 def generate_rtp(tpg_filename):
     fields = set(tpg_all_fields)
     rtp = ManageFFFiles(tpg_filename, FileType.TPG, fields)
     return rtp_header + rtp
-
-
-
-
 
 def generate_atm(tpg_filename):
     fields = set(["atoms"])
@@ -379,6 +428,9 @@ if __name__ == "__main__":
     ffbonded = generate_ffbonded("./dat/BCHL.prm")
     with open("./output.ff/ffbonded.itp",'w') as f:
         f.write(ffbonded)
+    ffnonbonded = generate_ffnonbonded("./dat/BCHL.prm")
+    with open("./output.ff/ffnonbonded.itp",'w') as f:
+        f.write(ffnonbonded)
     rtp = generate_rtp("./dat/BCHL.tpg")
     with open("./output.ff/bcl.rtp",'w') as f:
         f.write(rtp)
