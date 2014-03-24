@@ -5,6 +5,7 @@ class prmUnittests(unittest.TestCase):
     def setUp(self):
         prm2gmx.niceformat=False
         prm2gmx.convertToTwo=True
+        prm2gmx.convertToCharmm=False
 
     def test_convertBondline(self):
         out = prm2gmx.bondline("nmh   mgc    50.00   2.025", precision = 6)
@@ -67,6 +68,7 @@ class tpgUnitTests(unittest.TestCase):
         self.lines = lines.split('\n')
         self.lines_bond = " bonds                                                              \nnb   mg \nnc   mg \nnd   mg \nna   mg \nnb   c1b".split('\n')
         prm2gmx.convertToTwo = True
+        prm2gmx.convertToCharmm=False
 
     def test_genericChargeLine(self):
         self.lines[3]
@@ -137,6 +139,19 @@ class tpgUnitTests(unittest.TestCase):
             self.assertEqual(test_lines[i], newline)
             self.assertEqual(test_modes[i], mode)
             self.assertEqual(test_group[i], group)
+
+
+class toCharmmUnitTests(unittest.TestCase):
+    def setUp(self):
+        prm2gmx.convertToTwo = False
+        prm2gmx.niceformat=False
+        prm2gmx.convertToCharmm= True
+
+    def test_atomtypeOnly(self):
+        line = "hc     ha0     0.1680   "
+        out = prm2gmx.chargeline(line, 1, precision=6)
+        self.assertEqual(out, "HC HA0 0.168 1")
+
 
 
 if __name__ == "__main__":

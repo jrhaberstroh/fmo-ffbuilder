@@ -1,7 +1,7 @@
 import sys
 import traceback
 import numpy as np
-
+import yaml
 
 twoletter = { 'cab' : 'CD',\
 	      'cbb' : 'CE',\
@@ -31,6 +31,10 @@ twoletter = { 'cab' : 'CD',\
 	      'cs'  : 'Cs',\
 	      'li'  : 'Li',\
 	      'zn'  : 'Zn'};
+
+file_handle = open("dat/amber2charmm.yml", 'r')
+amber2charmm = yaml.safe_load(file_handle)
+file_handle.close()
 
 # Conversion for atomtypes, from three-letter into two-letter. I don't know why she swallowed
 #   the fly; perhaps she'll die.
@@ -100,6 +104,7 @@ rtp_header = "; Header taken from amber03 aminoacids.rtp\n" + \
 
 niceformat = True
 convertToTwo = False
+convertToCharmm = True
 
 def set_pos(string_in, pos):
     assert pos >= len(string_in)
@@ -109,7 +114,7 @@ def set_pos(string_in, pos):
 kCal2kJ = 4.184
 nm2A    = 10.
 
-def generic_line(line_arr, entries_per_line, order, units, datatype=None, precision=6):
+def generic_line(line_arr, entries_per_line, order, units, datatype=None, precision=6, atomname=None):
     ''' 
     generic_line()
 
@@ -120,15 +125,22 @@ def generic_line(line_arr, entries_per_line, order, units, datatype=None, precis
     dataype determines the conversion for output (default float)
     precision determines how many chars to print in quantitative args
 
+    atomname is an optional array of bools, of length entries_per_line. Bools with False will be converted
+        to CHARMM names, and bools with True will be skipped in conversion. This protects atomnames but
+        allows conversion of atomtypes.
+
     Returns a string of line_out.
     '''
 
     if datatype==None:
         datatype=[float]*len(units)
+    if atomname==None:
+        atomname=[False]*entries_per_line
 
     assert (len(line_arr) == (entries_per_line + len(order)))
     assert (len(units)    == len(order))
     assert (len(datatype) == len(order))
+    assert (len(atomname) == entries_per_line)
 
     line_out = ""
 
@@ -141,7 +153,10 @@ def generic_line(line_arr, entries_per_line, order, units, datatype=None, precis
         if convertToTwo:
             line_out += (line_arr[i].upper() if twoletter.get(line_arr[i])==None else twoletter[line_arr[i]])
         else:
-            line_out += line_arr[i].upper()
+            if convertToCharmm and atomname[i] == False:
+                line_out += amber2charmm[line_arr[i].upper()] if amber2charmm.get(line_arr[i].upper())!=None else line_arr[i].upper()
+            else:
+                line_out += line_arr[i].upper()
         if niceformat:
             line_out = set_pos(line_out, column_spacing * spacer_index)
             spacer_index += 1
@@ -245,7 +260,7 @@ def improperline(line_in, precision = 6):
     return torsionline(" ".join(line_in.split()[0:-1]), precision = precision, improper = True)
 
 def chargeline(line_in, group, precision = 6):
-    return generic_line(line_in.split()+[str(group)], 2, [0, 1], [1., 1.], [float, int], precision=precision)
+    return generic_line(line_in.split()+[str(group)], 2, [0, 1], [1., 1.], [float, int], precision=precision, atomname=[True, False])
 
 def nonbondedline(line_in, precision = 6):
     order =    [2,    3,     4,     5,    0,     1]
@@ -385,7 +400,7 @@ def ManageFFFiles(filename, filetype, fields):
                 raise RuntimeError(file_out)
     return file_out
 
-prm_all_fields=["BOND","BENDING","TORSION PROPER","TORSION IMPROPER","NONBONDED MIXRULE"]
+prm_all_fields=["BOND","BENDINGS","TORSION PROPER","TORSION IMPROPER","NONBONDED MIXRULE"]
 tpg_all_fields = ["RESIDUE","atoms","bonds", "imphd"]
 
 
