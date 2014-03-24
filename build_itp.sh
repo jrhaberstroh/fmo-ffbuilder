@@ -29,7 +29,7 @@ rm bcl.gro
 rm trash*
 rm residuetypes.dat
 
-TOP_OK=false
+TOP_OK=true
 
 if [ "$TOP_OK" = true ]; then
 
@@ -69,7 +69,7 @@ if [ "$TOP_OK" = true ]; then
     cat conf.pdb | grep ATOM                     > 4BCL.pdb
     cat 4BCL_BCL.pdb | grep ATOM                >> 4BCL.pdb
     
-    editconf -f 4BCL.pdb -o 4BCL.gro
+    editconf -f 4BCL.pdb -o 4BCL.gro -d 1
     
     
     
@@ -94,6 +94,6 @@ if [ "$TOP_OK" = true ]; then
     
     mkdir em
     echo "BCL    Pigment" > residuetypes.dat
-    grompp -p 4BCL.top -c 4BCL.gro -f ../dat/mdp/em.mdp -o em/em -po em/em
+    grompp -v -p 4BCL.top -c 4BCL.gro -f ../dat/mdp/em.mdp -o em/em -po em/em
    
 fi 
