@@ -371,6 +371,7 @@ class FileType:
     PRM = 1
     TPG = 2
 
+default_precision = 10
 
 def ManageFFFiles(filename, filetype, fields):
     file_out = ""
@@ -380,9 +381,9 @@ def ManageFFFiles(filename, filetype, fields):
         for l in f:
             try:
                 if   filetype == FileType.PRM:
-                    newline, mode = manageprmlines(l,mode, precision = 7)
+                    newline, mode = manageprmlines(l,mode, precision = default_precision)
                 elif filetype == FileType.TPG:
-                    newline, mode, group = managetpglines(l, mode, group, precision = 7)
+                    newline, mode, group = managetpglines(l, mode, group, precision = default_precision)
                 if newline != None and (mode in fields):
                     file_out += newline + "\n"
             except RuntimeError as error_info:
@@ -402,8 +403,6 @@ def ManageFFFiles(filename, filetype, fields):
 
 prm_all_fields=["BOND","BENDINGS","TORSION PROPER","TORSION IMPROPER","NONBONDED MIXRULE"]
 tpg_all_fields = ["RESIDUE","atoms","bonds", "imphd"]
-
-
 
 
 

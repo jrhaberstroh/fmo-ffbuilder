@@ -21,13 +21,28 @@ pdb2gmx -ff output -f dat/bchl.gro -o output.ff/bcl.gro -p output.ff/bcl.top -i 
 cp output.ff/bcl.top .
 cp output.ff/bcl.gro .
 
+# ============GENERATE THE CDC ITP FILES==========================
+out=""
+while read p ; do
+    atomname=$(echo $p | cut -d" " -f2 )
+    q_gd=$(echo $p | cut -d" " -f7)
+    q_ex=$(echo $p | cut -d" " -f8)
+    sed -i "/^.*BCL .* $atomname / s/\(^.*\s\)\(\S\+\)\(.*[0-9]\+.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1\2\3$q_gd \t\5 \t\2 \t$q_ex\t\5 ;/" output.ff/bcl.top
+    #cat output.ff/bcl.top | grep $atomname
+done < dat/BCHL_charges.txt
+sed -i "/^.*BCL\s\+H\S*[A-Z].*/ s/\(^.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1 0.000 \t\3 ;/" output.ff/bcl.top
+sed -i '110,121 s/\S\+[0-9]\s\+\(\S\+[0-9]\)\s\+;.*/\t0.000  \t\1\t ;/' output.ff/bcl.top
+#sed -i '90,100 s/.*//' output.ff/bcl.top
+
+tail -n+21 output.ff/bcl.top | head -n-8 >> output.ff/bcl.itp
+
 # ====================TEST THE TOPOLOGY =============================
 grompp -f dat/mdp/em.mdp -c bcl.gro -p bcl.top -o trash -po trash
-tail -n+21 output.ff/bcl.top | head -n-8 >> output.ff/bcl.itp
 rm bcl.top
 rm bcl.gro
 rm trash*
 rm residuetypes.dat
+
 
 TOP_OK=true
 
