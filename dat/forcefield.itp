@@ -1,0 +1,16 @@
+********************************************************************
+ * BChl Forcefield port by John Haberstroh, UC Berkeley, Dept of 
+ * Chemistry. These parameters are based on the forcefields relased
+ * by Ceccarelli et al, J Comp Chem 24(2), 129-142 (2002).
+ * This header taken from Amber94.
+********************************************************************
+
+
+#define _FF_OUTPUT
+
+[ defaults ]
+; nbfunc        comb-rule       gen-pairs       fudgeLJ fudgeQQ
+1               2               yes             0.5     0.8333
+
+#include "ffnonbonded.itp"
+#include "ffbonded.itp"
