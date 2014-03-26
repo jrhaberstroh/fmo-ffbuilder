@@ -1,11 +1,13 @@
-integrator      = steep
+integrator      = cg
 nsteps          = 500
-emtol           = 10.0
+emtol           = 1.0
 emstep          = 0.01
+nstcgsteep      = 100
 
 
 cutoff-scheme   = group
 nstlist         = 1
+nstxout         = 1
 pbc             = xyz
 coulombtype     = PME
 

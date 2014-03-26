@@ -165,7 +165,7 @@ def generic_line(line_arr, entries_per_line, order, units, datatype=None, precis
 
     peak_pos = column_spacing*spacer_index
 
-    column_spacing = 10
+    column_spacing = 13
     spacer_index = 1
     sign_char = 0
 
@@ -264,7 +264,7 @@ def chargeline(line_in, group, precision = 6):
 
 def nonbondedline(line_in, precision = 6):
     order =    [2,    3,     4,     5,    0,     1]
-    units =    [1.  , 1.,    1.,    1.,  .01782, kCal2kJ]
+    units =    [1.  , 1.,   1.,    1.,  .1782, kCal2kJ]
     datatype = [int , float, float, str, float, float]
     dat_arr = line_in.split()
     dat_arr = dat_arr[0:3] + [str(mass2num[dat_arr[-1]]), dat_arr[-1], '0.000', 'A']

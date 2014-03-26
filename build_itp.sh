@@ -84,7 +84,7 @@ if [ "$TOP_OK" = true ]; then
     cat conf.pdb | grep ATOM                     > 4BCL.pdb
     cat 4BCL_BCL.pdb | grep ATOM                >> 4BCL.pdb
     
-    editconf -f 4BCL.pdb -o 4BCL.gro -d 1
+    editconf -f 4BCL.pdb -o 4BCL.gro -d 1 -bt dodecahedron
     
     
     
@@ -103,12 +103,32 @@ if [ "$TOP_OK" = true ]; then
     echo 'BCL                 7'                         >> 4BCL_FIX.top
     
     mv 4BCL_FIX.top 4BCL.top
+
+    rm 4BCL_PROTEIN.pdb
+    rm 4BCL_BCL.pdb
+    rm 4BCL.pdb
+    rm conf.pdb
     
     
     # ============RUN SIMPLE CODE====================
     
+    genbox -cp 4BCL.gro -p 4BCL.top -o 4BCL.gro -cs spc216.gro
+    grompp -f ../dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
+    genion -s temp.tpr -o 4BCL.gro -p 4BCL.top -pname NA -nname CL -neutral
+    #grompp -f ../dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
+    #trjconv -f 4BCL.gro -s temp.tpr -ur compact -o 4BCL_pbc.gro -pbc res
+    rm \#*\#
+    rm temp.tpr
+
+    make_ndx -f 4BCL.gro -o index.ndx
+    
     mkdir em
     echo "BCL    Pigment" > residuetypes.dat
     grompp -v -p 4BCL.top -c 4BCL.gro -f ../dat/mdp/em.mdp -o em/em -po em/em
+    cd em
+    mdrun -v -deffnm em
+    cd ..
+
+    trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact
    
 fi 
