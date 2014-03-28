@@ -71,7 +71,7 @@ if [ "$TOP_OK" = true ]; then
     #cat output.ff/bcl.rtp        > mddir/charmm_mod.ff/bcl.rtp
     #cat dat/bchl.hdb             > mddir/charmm_mod.ff/bcl.hdb
     head -n-8 output.ff/bcl.itp   > mddir/charmm_mod.ff/bcl.itp
-    cat output.ff/bcl_posres.itp  > mddir/charmm_mod.ff/bcl_posres.itp
+    cp output.ff/bcl_posre.itp      mddir/charmm_mod.ff/bcl_posre.itp
     cat output.ff/atomtypes.atp  >> mddir/charmm_mod.ff/atomtypes.atp
     
     cat output.ff/ffbonded.itp    >> mddir/charmm_mod.ff/ffbonded.itp
@@ -97,7 +97,7 @@ if [ "$TOP_OK" = true ]; then
     echo ''                                              >> 4BCL_FIX.top
     echo '; include BCL position restraints'             >> 4BCL_FIX.top
     echo '#ifdef POSRES'                                 >> 4BCL_FIX.top
-    echo '#include "./charmm_mod.ff/bcl_posres.itp"'     >> 4BCL_FIX.top
+    echo '#include "./charmm_mod.ff/bcl_posre.itp"'      >> 4BCL_FIX.top
     echo '#endif'                                        >> 4BCL_FIX.top
     tail -n8 4BCL.top                                    >> 4BCL_FIX.top
     echo 'BCL                 7'                         >> 4BCL_FIX.top
