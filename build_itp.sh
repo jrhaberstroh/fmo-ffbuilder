@@ -47,7 +47,7 @@ rm trash*
 rm residuetypes.dat
 
 
-TOP_OK=false
+TOP_OK=true
 
 if [ "$TOP_OK" = true ]; then
 
@@ -73,6 +73,7 @@ if [ "$TOP_OK" = true ]; then
     #cat output.ff/bcl.rtp        > mddir/amber_mod.ff/bcl.rtp
     #cat dat/bchl.hdb             > mddir/amber_mod.ff/bcl.hdb
     head -n-8 output.ff/bcl.itp   > mddir/amber_mod.ff/bcl.itp
+    head -n-8 output.ff/bcx.itp   > mddir/amber_mod.ff/bcx.itp
     cp output.ff/bcl_posre.itp      mddir/amber_mod.ff/bcl_posre.itp
     cat output.ff/atomtypes.atp  >> mddir/amber_mod.ff/atomtypes.atp
     
@@ -93,6 +94,7 @@ if [ "$TOP_OK" = true ]; then
     echo ''                                              >> 4BCL_FIX.top
     echo '; include BCL forcefield'                      >> 4BCL_FIX.top
     echo '#include "./amber_mod.ff/bcl.itp"'            >> 4BCL_FIX.top
+    echo '#include "./amber_mod.ff/bcx.itp"'            >> 4BCL_FIX.top
     echo ''                                              >> 4BCL_FIX.top
     echo '; include BCL position restraints'             >> 4BCL_FIX.top
     echo '#ifdef POSRES'                                 >> 4BCL_FIX.top

@@ -59,9 +59,12 @@ def generic_line(line_arr, entries_per_line, order, units, datatype=None, precis
         if convertToTwo:
             line_out += (line_arr[i].upper() if twoletter.get(line_arr[i])==None else twoletter[line_arr[i]])
         elif convertToBCL:
-            line_out += line_arr[i].upper() + "BC"
-        else:
-            if convertToCharmm and atomname[i] == False:
+            if atomname[i] == False and line_arr[i].upper() != "X":
+                line_out += line_arr[i].upper() + "BC"
+            else:
+                line_out += line_arr[i].upper()
+        elif convertToCharmm:
+            if atomname[i] == False:
                 line_out += amber2charmm[line_arr[i].upper()] if amber2charmm.get(line_arr[i].upper())!=None else line_arr[i].upper()
             else:
                 line_out += line_arr[i].upper()
@@ -138,7 +141,7 @@ def torsionline(line_in, precision = 6, improper = False):
     line_arr = line_in.split() 
     append_success = append_phase(line_arr)
     if not append_success:
-        return "FAIL"
+        return None
     if improper:
         line_arr += [4] # Periodic improper dihedral FF type parameter for GROMACS
     else:
@@ -174,6 +177,8 @@ def nonbondedline(line_in, precision = 6):
     units =    [1.  , 1.,   1.,    1.,  .1782, kCal2kJ]
     datatype = [int , float, float, str, float, float]
     dat_arr = line_in.split()
+    if mass2num.get(dat_arr[-1]) == None:
+        return None
     dat_arr = dat_arr[0:3] + [str(mass2num[dat_arr[-1]]), dat_arr[-1], '0.000', 'A']
     return generic_line(dat_arr, 1, order, units, datatype, precision=precision)
 

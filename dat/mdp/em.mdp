@@ -1,8 +1,8 @@
 integrator      = cg
-nsteps          = 500
+nsteps          = 100
 emtol           = 1.0
 emstep          = 0.01
-nstcgsteep      = 100
+nstcgsteep      = 10
 
 
 cutoff-scheme   = group
