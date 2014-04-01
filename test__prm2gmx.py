@@ -6,6 +6,7 @@ class prmUnittests(unittest.TestCase):
         prm2gmx.niceformat=False
         prm2gmx.convertToTwo=True
         prm2gmx.convertToCharmm=False
+        prm2gmx.convertToBCL=False
 
     def test_convertBondline(self):
         out = prm2gmx.bondline("nmh   mgc    50.00   2.025", precision = 6)
@@ -69,6 +70,7 @@ class tpgUnitTests(unittest.TestCase):
         self.lines_bond = " bonds                                                              \nnb   mg \nnc   mg \nnd   mg \nna   mg \nnb   c1b".split('\n')
         prm2gmx.convertToTwo = True
         prm2gmx.convertToCharmm=False
+        prm2gmx.convertToBCL=False
 
     def test_genericChargeLine(self):
         self.lines[3]

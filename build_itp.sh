@@ -21,19 +21,22 @@ pdb2gmx -ff output -f dat/bchl.gro -o output.ff/bcl.gro -p output.ff/bcl.top -i 
 cp output.ff/bcl.top .
 cp output.ff/bcl.gro .
 
-# ============GENERATE THE CDC ITP FILES==========================
+# ============GENERATE THE EXCITED ITP FILES==========================
 out=""
+sed -i "/^.*BCL\s\+H\S*[A-Z].*/ s/\(^.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1 0.000 \t\3 ;/" output.ff/bcl.top
+sed -i '110,121 s/\S\+[0-9]\s\+\(\S\+[0-9]\)\s\+;.*/\t0.000  \t\1\t ;/' output.ff/bcl.top
+cp output.ff/bcl.top output.ff/bcx.top
 while read p ; do
     atomname=$(echo $p | cut -d" " -f2 )
     q_gd=$(echo $p | cut -d" " -f7)
     q_ex=$(echo $p | cut -d" " -f8)
-    sed -i "/^.*BCL .* $atomname / s/\(^.*\s\)\(\S\+\)\(.*[0-9]\+.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1\2\3$q_gd \t\5 \t\2 \t$q_ex\t\5 ;/" output.ff/bcl.top
+    sed -i "/^.*BCL .* $atomname / s/\(^.*\s\)\(\S\+\)\(.*[0-9]\+.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1\2\3$q_gd \t\5 \t\2 \t$q_ex\t\5 ;/" output.ff/bcx.top
+    sed -i "/^.*BCL .* $atomname / s/\(^.*\s\)\(\S\+\)\(.*[0-9]\+.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1\2\3$q_gd \t\5 ;/" output.ff/bcl.top
     #cat output.ff/bcl.top | grep $atomname
 done < dat/BCHL_charges.txt
-sed -i "/^.*BCL\s\+H\S*[A-Z].*/ s/\(^.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1 0.000 \t\3 ;/" output.ff/bcl.top
-sed -i '110,121 s/\S\+[0-9]\s\+\(\S\+[0-9]\)\s\+;.*/\t0.000  \t\1\t ;/' output.ff/bcl.top
-#sed -i '90,100 s/.*//' output.ff/bcl.top
+sed -i 's/BCL/BCX/g' output.ff/bcx.top
 
+tail -n+21 output.ff/bcx.top | head -n-8 >> output.ff/bcx.itp
 tail -n+21 output.ff/bcl.top | head -n-8 >> output.ff/bcl.itp
 
 # ====================TEST THE TOPOLOGY =============================
@@ -44,10 +47,9 @@ rm trash*
 rm residuetypes.dat
 
 
-TOP_OK=true
+TOP_OK=false
 
 if [ "$TOP_OK" = true ]; then
-
 
     if [ -e mddir ]; then
         rm -r mddir
@@ -64,44 +66,51 @@ if [ "$TOP_OK" = true ]; then
     
     
     #==============MOVE FF DATA INTO CHARMM_MOD===============================
-    cp -r dat/charmm27.ff mddir/charmm_mod.ff
+    cp -r dat/amber99sb-ildn.ff mddir/amber_mod.ff
     cat dat/pdb/4BCL_FIX.pdb | grep ATOM > mddir/4BCL_PROTEIN.pdb 
     
-    #tail -n+30 output.ff/bcl.rtp >> mddir/charmm_mod.ff/aminoacids.rtp
-    #cat output.ff/bcl.rtp        > mddir/charmm_mod.ff/bcl.rtp
-    #cat dat/bchl.hdb             > mddir/charmm_mod.ff/bcl.hdb
-    head -n-8 output.ff/bcl.itp   > mddir/charmm_mod.ff/bcl.itp
-    cp output.ff/bcl_posre.itp      mddir/charmm_mod.ff/bcl_posre.itp
-    cat output.ff/atomtypes.atp  >> mddir/charmm_mod.ff/atomtypes.atp
+    #tail -n+30 output.ff/bcl.rtp >> mddir/amber_mod.ff/aminoacids.rtp
+    #cat output.ff/bcl.rtp        > mddir/amber_mod.ff/bcl.rtp
+    #cat dat/bchl.hdb             > mddir/amber_mod.ff/bcl.hdb
+    head -n-8 output.ff/bcl.itp   > mddir/amber_mod.ff/bcl.itp
+    cp output.ff/bcl_posre.itp      mddir/amber_mod.ff/bcl_posre.itp
+    cat output.ff/atomtypes.atp  >> mddir/amber_mod.ff/atomtypes.atp
     
-    cat output.ff/ffbonded.itp    >> mddir/charmm_mod.ff/ffbonded.itp
-    cat output.ff/ffnonbonded.itp >> mddir/charmm_mod.ff/ffnonbonded.itp
+    cat output.ff/ffbonded.itp    >> mddir/amber_mod.ff/ffbonded.itp
+    cat output.ff/ffnonbonded.itp >> mddir/amber_mod.ff/ffnonbonded.itp
     
     
     #================GENERATE PROTEIN .GRO FILE AND MERGE IN BCLs=======================
     cd mddir 
-    pdb2gmx -f 4BCL_PROTEIN.pdb -o conf.pdb -ff charmm_mod -chainsep id_and_ter -water tip3p -p 4BCL.top
+    pdb2gmx -f 4BCL_PROTEIN.pdb -o conf.pdb -ff amber_mod -chainsep id_and_ter -water tip3p -p 4BCL.top
     cat conf.pdb | grep ATOM                     > 4BCL.pdb
     cat 4BCL_BCL.pdb | grep ATOM                >> 4BCL.pdb
     
     editconf -f 4BCL.pdb -o 4BCL.gro -d 1 -bt dodecahedron
     
-    
-    
-    
     #================INSERT ITP INCLUDES INTO TOP FILE=======================
     head -n-8 4BCL.top                                    > 4BCL_FIX.top
     echo ''                                              >> 4BCL_FIX.top
     echo '; include BCL forcefield'                      >> 4BCL_FIX.top
-    echo '#include "./charmm_mod.ff/bcl.itp"'            >> 4BCL_FIX.top
+    echo '#include "./amber_mod.ff/bcl.itp"'            >> 4BCL_FIX.top
     echo ''                                              >> 4BCL_FIX.top
     echo '; include BCL position restraints'             >> 4BCL_FIX.top
     echo '#ifdef POSRES'                                 >> 4BCL_FIX.top
-    echo '#include "./charmm_mod.ff/bcl_posre.itp"'      >> 4BCL_FIX.top
+    echo '#include "./amber_mod.ff/bcl_posre.itp"'      >> 4BCL_FIX.top
     echo '#endif'                                        >> 4BCL_FIX.top
     tail -n8 4BCL.top                                    >> 4BCL_FIX.top
-    echo 'BCL                 7'                         >> 4BCL_FIX.top
-    
+
+    echo ''                                              >> 4BCL_FIX.top
+    for counter in {1..7}
+    do
+        echo "#ifdef BCX_$counter"                           >> 4BCL_FIX.top
+        echo 'BCX                 1'                         >> 4BCL_FIX.top
+        echo '#endif'                                        >> 4BCL_FIX.top
+        echo "#ifndef BCX_$counter"                          >> 4BCL_FIX.top
+        echo 'BCL                 1'                         >> 4BCL_FIX.top
+        echo '#endif'                                        >> 4BCL_FIX.top
+    done
+    echo ''                                              >> 4BCL_FIX.top
     mv 4BCL_FIX.top 4BCL.top
 
     rm 4BCL_PROTEIN.pdb
@@ -130,5 +139,8 @@ if [ "$TOP_OK" = true ]; then
     cd ..
 
     trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact
+
+    grompp -f em/em.mdp -c 4BCL.gro -p 4BCL.top -pp 4BCL_pp.top -o trash -po trash
+    rm trash*
    
 fi 
