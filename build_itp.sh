@@ -22,6 +22,8 @@ cp output.ff/bcl.top .
 cp output.ff/bcl.gro .
 
 # ============GENERATE THE EXCITED ITP FILES==========================
+tail -n+21 output.ff/bcl.top | head -n-8 >> output.ff/bcl_original.itp
+
 out=""
 sed -i "/^.*BCL\s\+H\S*[A-Z].*/ s/\(^.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1 0.000 \t\3 ;/" output.ff/bcl.top
 sed -i '110,121 s/\S\+[0-9]\s\+\(\S\+[0-9]\)\s\+;.*/\t0.000  \t\1\t ;/' output.ff/bcl.top
@@ -36,8 +38,8 @@ while read p ; do
 done < dat/BCHL_charges.txt
 sed -i 's/BCL/BCX/g' output.ff/bcx.top
 
-tail -n+21 output.ff/bcx.top | head -n-8 >> output.ff/bcx.itp
-tail -n+21 output.ff/bcl.top | head -n-8 >> output.ff/bcl.itp
+tail -n+21 output.ff/bcx.top | head -n-12 >> output.ff/bcx.itp
+tail -n+21 output.ff/bcl.top | head -n-12 >> output.ff/bcl.itp
 
 # ====================TEST THE TOPOLOGY =============================
 grompp -f dat/mdp/em.mdp -c bcl.gro -p bcl.top -o trash -po trash
@@ -72,8 +74,9 @@ if [ "$TOP_OK" = true ]; then
     #tail -n+30 output.ff/bcl.rtp >> mddir/amber_mod.ff/aminoacids.rtp
     #cat output.ff/bcl.rtp        > mddir/amber_mod.ff/bcl.rtp
     #cat dat/bchl.hdb             > mddir/amber_mod.ff/bcl.hdb
-    head -n-8 output.ff/bcl.itp   > mddir/amber_mod.ff/bcl.itp
-    head -n-8 output.ff/bcx.itp   > mddir/amber_mod.ff/bcx.itp
+    cp output.ff/bcl.itp            mddir/amber_mod.ff/bcl.itp
+    cp output.ff/bcx.itp            mddir/amber_mod.ff/bcx.itp
+    cp output.ff/bcl_original.itp   mddir/amber_mod.ff/bcl_original.itp
     cp output.ff/bcl_posre.itp      mddir/amber_mod.ff/bcl_posre.itp
     cat output.ff/atomtypes.atp  >> mddir/amber_mod.ff/atomtypes.atp
     
@@ -93,8 +96,12 @@ if [ "$TOP_OK" = true ]; then
     head -n-8 4BCL.top                                    > 4BCL_FIX.top
     echo ''                                              >> 4BCL_FIX.top
     echo '; include BCL forcefield'                      >> 4BCL_FIX.top
+    echo "#ifdef BCLORIGINAL"                            >> 4BCL_FIX.top
+    echo '#include "./amber_mod.ff/bcl_original.itp"'    >> 4BCL_FIX.top
+    echo '#else'                                         >> 4BCL_FIX.top
     echo '#include "./amber_mod.ff/bcl.itp"'            >> 4BCL_FIX.top
     echo '#include "./amber_mod.ff/bcx.itp"'            >> 4BCL_FIX.top
+    echo '#endif'                                        >> 4BCL_FIX.top
     echo ''                                              >> 4BCL_FIX.top
     echo '; include BCL position restraints'             >> 4BCL_FIX.top
     echo '#ifdef POSRES'                                 >> 4BCL_FIX.top
@@ -103,15 +110,18 @@ if [ "$TOP_OK" = true ]; then
     tail -n8 4BCL.top                                    >> 4BCL_FIX.top
 
     echo ''                                              >> 4BCL_FIX.top
+    echo "#ifdef BCLORIGINAL"                            >> 4BCL_FIX.top
+    echo 'BCL                 7'                         >> 4BCL_FIX.top
+    echo '#else'                                         >> 4BCL_FIX.top
     for counter in {1..7}
     do
         echo "#ifdef BCX_$counter"                           >> 4BCL_FIX.top
         echo 'BCX                 1'                         >> 4BCL_FIX.top
-        echo '#endif'                                        >> 4BCL_FIX.top
-        echo "#ifndef BCX_$counter"                          >> 4BCL_FIX.top
+        echo '#else'                                         >> 4BCL_FIX.top
         echo 'BCL                 1'                         >> 4BCL_FIX.top
         echo '#endif'                                        >> 4BCL_FIX.top
     done
+    echo '#endif'                                        >> 4BCL_FIX.top
     echo ''                                              >> 4BCL_FIX.top
     mv 4BCL_FIX.top 4BCL.top
 
@@ -125,7 +135,7 @@ if [ "$TOP_OK" = true ]; then
     
     genbox -cp 4BCL.gro -p 4BCL.top -o 4BCL.gro -cs spc216.gro
     grompp -f ../dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
-    genion -s temp.tpr -o 4BCL.gro -p 4BCL.top -pname NA -nname CL -neutral
+    genion -s temp.tpr -o 4BCL.gro -p 4BCL.top -pname NA -nname CL -neutral <<< "SOL"
     #grompp -f ../dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
     #trjconv -f 4BCL.gro -s temp.tpr -ur compact -o 4BCL_pbc.gro -pbc res
     rm \#*\#
@@ -140,7 +150,7 @@ if [ "$TOP_OK" = true ]; then
     mdrun -v -deffnm em
     cd ..
 
-    trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact
+    trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact -n index.ndx <<< "Protein_BCL"
 
     grompp -f em/em.mdp -c 4BCL.gro -p 4BCL.top -pp 4BCL_pp.top -o trash -po trash
     rm trash*
