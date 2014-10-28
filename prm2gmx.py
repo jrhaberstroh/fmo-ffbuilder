@@ -24,10 +24,18 @@ def generic_line(line_arr, entries_per_line, order, units, datatype=None, precis
 
     Converts line_arr into the correct format.
 
+
+
     order determines the order of the quantitative arguments
     units determines their units
     dataype determines the conversion for output (default float)
     precision determines how many chars to print in quantitative args
+    
+    e.g.
+    IN :: [q1, q2, q3]
+    order = [1, 2, 0]
+    units = [1., 2., 3.]
+    OUT :: [1 * q2, 2 * q3, 3 * q1]
 
     atomname is an optional array of bools, of length entries_per_line. Bools with False will be converted
         to CHARMM names, and bools with True will be skipped in conversion. This protects atomnames but
@@ -173,12 +181,18 @@ def chargeline(line_in, group, precision = 6):
     return generic_line(line_in.split()+[str(group)], 2, [0, 1], [1., 1.], [float, int], precision=precision, atomname=[True, False])
 
 def nonbondedline(line_in, precision = 6):
+    sixth_root_onehalf = .890899
     order =    [2,    3,     4,     5,    0,     1]
-    units =    [1.  , 1.,   1.,    1.,  .1782, kCal2kJ]
+    units =    [1.  , 1.,   1.,    1., sixth_root_onehalf/nm2A, kCal2kJ]
     datatype = [int , float, float, str, float, float]
     dat_arr = line_in.split()
     if mass2num.get(dat_arr[-1]) == None:
         return None
+    # Use the first three columns (atomname, R*i [VDW radius], ei [VDW energy]), 
+    #   then append the atomic number (using mass lookup table)
+    #   then append the mass
+    #   then append 0
+    #   then append A
     dat_arr = dat_arr[0:3] + [str(mass2num[dat_arr[-1]]), dat_arr[-1], '0.000', 'A']
     return generic_line(dat_arr, 1, order, units, datatype, precision=precision)
 
@@ -350,17 +364,33 @@ def generate_atm(tpg_filename):
     return return_str
 
 
+import argparse
 if __name__ == "__main__":
-    ffbonded = generate_ffbonded("./dat/BCHL.prm")
-    with open("./output.ff/ffbonded.itp",'w') as f:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-AMBER94prm',   required=True,  
+            help='Forcefield paramers (.prm) file for AMBER94 forcefield')
+    parser.add_argument('-AMBER94tpg',   required=True,  
+            help='Forcefield topology (.tpg) file for AMBER94 forcefield')
+    parser.add_argument('-GMXbonded',    required=True,  
+            help='Forcefield output for GROMACS')
+    parser.add_argument('-GMXnonbonded', required=True,  
+            help='Forcefield output for GROMACS')
+    parser.add_argument('-GMXrtp',       required=True,  
+            help='Forcefield output for GROMACS')
+    parser.add_argument('-GMXatomtypes', required=True,  
+            help='Forcefield output for GROMACS')
+    args = parser.parse_args()
+
+    ffbonded = generate_ffbonded(args.AMBER94prm)
+    with open(args.GMXbonded,'w') as f:
         f.write(ffbonded)
-    ffnonbonded = generate_ffnonbonded("./dat/BCHL.prm")
-    with open("./output.ff/ffnonbonded.itp",'w') as f:
+    ffnonbonded = generate_ffnonbonded(args.AMBER94prm)
+    with open(args.GMXnonbonded,'w') as f:
         f.write(ffnonbonded)
-    rtp = generate_rtp("./dat/BCHL.tpg")
-    with open("./output.ff/bcl.rtp",'w') as f:
+    rtp = generate_rtp(args.AMBER94tpg)
+    with open(args.GMXrtp,'w') as f:
         f.write(rtp)
-    atm = generate_atm("./dat/BCHL.tpg")
-    with open("./output.ff/atomtypes.atp",'w') as f:
+    atm = generate_atm(args.AMBER94tpg)
+    with open(args.GMXatomtypes,'w') as f:
         f.write(atm)
 

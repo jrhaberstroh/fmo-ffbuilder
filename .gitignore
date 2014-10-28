@@ -1,6 +1,6 @@
 *.pyc
-output.ff
 dat
 \#*\#
 mddir
-gmx_topol_tools
+bcl.ff
+fmo.ff
