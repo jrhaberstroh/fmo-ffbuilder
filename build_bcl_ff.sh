@@ -36,7 +36,7 @@ python prm2gmx.py -AMBER94prm dat/BCHL.prm -AMBER94tpg dat/BCHL.tpg \
 cp dat/forcefield.itp bcl.ff/.
 echo "BCL    BCL" > residuetypes.dat
 # Create the .top file
-$PDB2GMX -ff output -f dat/bchl.gro -o bcl.ff/bcl.gro -p bcl.ff/bcl.top -i bcl.ff/bcl_posre.itp
+$PDB2GMX -ff bcl -f dat/bchl.gro -o bcl.ff/bcl.gro -p bcl.ff/bcl.top -i bcl.ff/bcl_posre.itp
 # Create the .itp file by cutting the top and bottom off of the .top
 tail -n+21 bcl.ff/bcl.top | head -n-12 >> bcl.ff/bcl.itp
 cp bcl.ff/bcl.top bcl.ff/bcl_cdc.top
@@ -52,6 +52,7 @@ sed -i "/^.*BCL\s\+H\S*[A-Z].*/ s/\(^.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s
 # Extra regex for remaining hydrogens, between lines of 110 and 121
 #   Set their charge to 0.000
 sed -i '110,121 s/\S\+[0-9]\s\+\(\S\+[0-9]\)\s\+;.*/\t0.000  \t\1\t ;/' bcl.ff/bcl_cdc.top
+sed -i "/BCL/ s/BCL/BCX/" bcl.ff/bcl_cdc.top
 
 # Insert the CDC charges with sed
 while read p ; do

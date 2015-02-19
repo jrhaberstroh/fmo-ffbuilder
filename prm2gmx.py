@@ -183,7 +183,7 @@ def chargeline(line_in, group, precision = 6):
 def nonbondedline(line_in, precision = 6):
     sixth_root_onehalf = .890899
     order =    [2,    3,     4,     5,    0,     1]
-    units =    [1.  , 1.,   1.,    1., sixth_root_onehalf/nm2A, kCal2kJ]
+    units =    [1.  , 1.,   1.,    1., 2. * sixth_root_onehalf/nm2A, kCal2kJ]
     datatype = [int , float, float, str, float, float]
     dat_arr = line_in.split()
     if mass2num.get(dat_arr[-1]) == None:
