@@ -10,13 +10,13 @@ parser.add_argument('-AMBER94prm',   required=True,
         help='Forcefield paramers (.prm) file for AMBER94 forcefield')
 parser.add_argument('-AMBER94tpg',   required=True,  
         help='Forcefield topology (.tpg) file for AMBER94 forcefield')
-parser.add_argument('-GMXbonded'
+parser.add_argument('-GMXbonded',     required=True,
         help='Forcefield output for GROMACS')
-parser.add_argument('-GMXnonbonded',
+parser.add_argument('-GMXnonbonded',  required=True,
         help='Forcefield output for GROMACS')
-parser.add_argument('-GMXrtp',
+parser.add_argument('-GMXrtp',       required=True,
         help='Forcefield output for GROMACS')
-parser.add_argument('-GMXatomtypes',
+parser.add_argument('-GMXatomtypes',  required=True,
         help='Forcefield output for GROMACS')
 parser.add_argument('-suffix', default='',
         help='Suffix to append to atomtypes')
