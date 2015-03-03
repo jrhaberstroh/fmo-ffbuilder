@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o errexit
 
 #------------------------------------------------------------
 #               REQUIRED SOFTWARE
@@ -19,6 +20,11 @@
 # dat/amber99sb-ildn.ff -- Amber99 forcefield for GROMACS
 
 
+#FFBASE=dat/gromacs-ff/amber99sb-ildn.ff
+FFBASE=dat/gromacs-ff/amber94.ff
+
+
+
 if [ -e fmo.ff ]; then
     rm -r fmo.ff
 fi
@@ -35,7 +41,7 @@ rm trash*
 
 
 #==============MERGE FF DATA==============================
-cp -r dat/gromacs-ff/amber99sb-ildn.ff fmo.ff/amber_mod.ff
+cp -r $FFBASE fmo.ff/amber_mod.ff
 cat dat/pdb/4BCL_FIX.pdb | grep ATOM > fmo.ff/4BCL_PROTEIN.pdb 
 
 #tail -n+30 bcl.ff/bcl.rtp >> fmo.ff/amber_mod.ff/aminoacids.rtp
@@ -56,7 +62,7 @@ pdb2gmx -f 4BCL_PROTEIN.pdb -o conf.pdb -ff amber_mod -chainsep id_and_ter -wate
 cat conf.pdb | grep ATOM                     > 4BCL.pdb
 cat 4BCL_BCL.pdb | grep ATOM                >> 4BCL.pdb
 
-editconf -f 4BCL.pdb -o 4BCL.gro -d 1 -bt dodecahedron
+editconf -f 4BCL.pdb -o 4BCL.gro -d 2 -bt dodecahedron
 
 #================INSERT ITP INCLUDES INTO TOP FILE=======================
 head -n-8 4BCL.top                                    > 4BCL_FIX.top
@@ -116,7 +122,8 @@ cd em
 mdrun -v -deffnm em
 cd ..
 
-trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact -n index.ndx <<< "Protein_BCL"
+#trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact -n index.ndx <<< "Protein_BCL"
+trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact -n index.ndx <<< "System"
 
 grompp -f em/em.mdp -c 4BCL.gro -p 4BCL.top -pp 4BCL_pp.top -o trash -po trash
 rm trash*

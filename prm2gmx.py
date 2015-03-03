@@ -4,19 +4,38 @@ import numpy as np
 import yaml
 from prm2gmx_const import *
 
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('-AMBER94prm',   required=True,  
+        help='Forcefield paramers (.prm) file for AMBER94 forcefield')
+parser.add_argument('-AMBER94tpg',   required=True,  
+        help='Forcefield topology (.tpg) file for AMBER94 forcefield')
+parser.add_argument('-GMXbonded'
+        help='Forcefield output for GROMACS')
+parser.add_argument('-GMXnonbonded',
+        help='Forcefield output for GROMACS')
+parser.add_argument('-GMXrtp',
+        help='Forcefield output for GROMACS')
+parser.add_argument('-GMXatomtypes',
+        help='Forcefield output for GROMACS')
+parser.add_argument('-suffix', default='',
+        help='Suffix to append to atomtypes')
+args = parser.parse_args()
 
 niceformat = True
 convertToTwo = False
 convertToCharmm = False
-convertToBCL = True
+
+addSuffix = True
+atomtypeSuffix = args.suffix
+
+kCal2kJ = 4.184 * 2.
+nm2A    = 10.
+VDW_scale = 2.0
 
 def set_pos(string_in, pos):
     assert pos >= len(string_in)
     return string_in + " "*(pos - len(string_in))
-
-
-kCal2kJ = 4.184
-nm2A    = 10.
 
 def generic_line(line_arr, entries_per_line, order, units, datatype=None, precision=6, atomname=None):
     ''' 
@@ -60,15 +79,15 @@ def generic_line(line_arr, entries_per_line, order, units, datatype=None, precis
     spacer_index = 1
 
     for i in xrange(entries_per_line) :
-        assert(convertToTwo + convertToCharmm + convertToBCL == 1)
+        assert(convertToTwo + convertToCharmm + addSuffix == 1)
 
 #        if (twoletter.get(line_arr[i])==None and len(line_arr[i]) >= 3):
 #            return None
         if convertToTwo:
             line_out += (line_arr[i].upper() if twoletter.get(line_arr[i])==None else twoletter[line_arr[i]])
-        elif convertToBCL:
+        elif addSuffix:
             if atomname[i] == False and line_arr[i].upper() != "X":
-                line_out += line_arr[i].upper() + "BC"
+                line_out += line_arr[i].upper() + atomtypeSuffix
             else:
                 line_out += line_arr[i].upper()
         elif convertToCharmm:
@@ -161,6 +180,7 @@ def torsionline(line_in, precision = 6, improper = False):
     datatype = [int, float, float, int]
     entries_per_line = 4;
 
+    # NOTE: Removed failure on torsion lines with 
     # Append the default angle value if the angle is missing
     # Also, convert the force to a positive number.
     #if float(line_arr[force_pos]) < 0:
@@ -183,7 +203,7 @@ def chargeline(line_in, group, precision = 6):
 def nonbondedline(line_in, precision = 6):
     sixth_root_onehalf = .890899
     order =    [2,    3,     4,     5,    0,     1]
-    units =    [1.  , 1.,   1.,    1., 2. * sixth_root_onehalf/nm2A, kCal2kJ]
+    units =    [1.  , 1.,   1.,    1., VDW_scale * sixth_root_onehalf/nm2A, kCal2kJ]
     datatype = [int , float, float, str, float, float]
     dat_arr = line_in.split()
     if mass2num.get(dat_arr[-1]) == None:
@@ -364,29 +384,16 @@ def generate_atm(tpg_filename):
     return return_str
 
 
-import argparse
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-AMBER94prm',   required=True,  
-            help='Forcefield paramers (.prm) file for AMBER94 forcefield')
-    parser.add_argument('-AMBER94tpg',   required=True,  
-            help='Forcefield topology (.tpg) file for AMBER94 forcefield')
-    parser.add_argument('-GMXbonded',    required=True,  
-            help='Forcefield output for GROMACS')
-    parser.add_argument('-GMXnonbonded', required=True,  
-            help='Forcefield output for GROMACS')
-    parser.add_argument('-GMXrtp',       required=True,  
-            help='Forcefield output for GROMACS')
-    parser.add_argument('-GMXatomtypes', required=True,  
-            help='Forcefield output for GROMACS')
-    args = parser.parse_args()
 
-    ffbonded = generate_ffbonded(args.AMBER94prm)
-    with open(args.GMXbonded,'w') as f:
-        f.write(ffbonded)
-    ffnonbonded = generate_ffnonbonded(args.AMBER94prm)
-    with open(args.GMXnonbonded,'w') as f:
-        f.write(ffnonbonded)
+    if args.GMXbonded:
+        ffbonded = generate_ffbonded(args.AMBER94prm)
+        with open(args.GMXbonded,'w') as f:
+            f.write(ffbonded)
+    if args.GMXnonbonded:
+        ffnonbonded = generate_ffnonbonded(args.AMBER94prm)
+        with open(args.GMXnonbonded,'w') as f:
+            f.write(ffnonbonded)
     rtp = generate_rtp(args.AMBER94tpg)
     with open(args.GMXrtp,'w') as f:
         f.write(rtp)

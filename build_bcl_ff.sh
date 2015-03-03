@@ -1,4 +1,6 @@
 #!/bin/bash
+set -o errexit
+
 
 #------------------------------------------------------------
 #               REQUIRED SOFTWARE
@@ -28,8 +30,9 @@ if [ -e bcl.ff ]; then
 fi
 mkdir bcl.ff
 python prm2gmx.py -AMBER94prm dat/BCHL.prm -AMBER94tpg dat/BCHL.tpg \
-    -GMXbonded bcl.ff/ffbonded.itp -GMXnonbonded bcl.ff/ffnonbonded.itp \
-    -GMXrtp bcl.ff/bcl.rtp         -GMXatomtypes bcl.ff/atomtypes.atp
+    -GMXbonded bcl.ff/ffbonded.itp #-GMXnonbonded bcl.ff/ffnonbonded.itp \
+    -GMXrtp bcl.ff/bcl.rtp         -GMXatomtypes bcl.ff/atomtypes.atp \
+    #-suffix 
 
 # ============GENERATE THE ITP==========================
 # Generate the single-molecule ITP for the base pararmeters
