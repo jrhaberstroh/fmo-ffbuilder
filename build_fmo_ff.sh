@@ -115,16 +115,20 @@ read -n1 -r -p "Press any key to continue... (where's the any key?)" key
 
 make_ndx -f 4BCL.gro -o index.ndx
 
+set +o errexit
+
 mkdir em
 echo "BCL    Pigment" > residuetypes.dat
 grompp -v -p 4BCL.top -c 4BCL.gro -f ../dat/mdp/em.mdp -o em/em -po em/em
 cd em
 mdrun -v -deffnm em
+EM_PASS=$?
+echo EM_PASS: $EM_PASS
 cd ..
-
-#trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact -n index.ndx <<< "Protein_BCL"
-trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact -n index.ndx <<< "System"
-
+if [ "$EM_PASS" -ne 0 ]; then
+    #trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact -n index.ndx <<< "Protein_BCL"
+    trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact -n index.ndx <<< "System"
+fi
 grompp -f em/em.mdp -c 4BCL.gro -p 4BCL.top -pp 4BCL_pp.top -o trash -po trash
 rm trash*
 
