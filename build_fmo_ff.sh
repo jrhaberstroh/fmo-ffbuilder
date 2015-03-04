@@ -24,39 +24,40 @@ FFBASE=dat/gromacs-ff/amber99sb-ildn.ff
 
 if [ "$1" = "BUILD" ]; then
     set -o nounset
+    OUTDIR=FMO_conf
     
-    if [ -e fmo.ff ]; then
-        rm -r fmo.ff
+    if [ -e $OUTDIR ]; then
+        rm -r $OUTDIR
     fi
-    mkdir fmo.ff
+    mkdir $OUTDIR
     
     # ============ADD HYDROGENS TO FMO BCL's, MOVE TO MDDIR=================
     cat dat/bchl.hdb > bcl.ff/bcl.hdb
     
     # Rip BCLs out of pdb file
-    cat dat/pdb/4BCL_FIX.pdb | grep BCL > fmo.ff/4BCL_BCL.pdb 
-    pdb2gmx -ff bcl -f fmo.ff/4BCL_BCL.pdb -o fmo.ff/4BCL_BCL.pdb -p trash -i trash
-    rm fmo.ff/\#*
+    cat dat/pdb/4BCL_FIX.pdb | grep BCL > $OUTDIR/4BCL_BCL.pdb 
+    pdb2gmx -ff bcl -f $OUTDIR/4BCL_BCL.pdb -o $OUTDIR/4BCL_BCL.pdb -p trash -i trash
+    rm $OUTDIR/\#*
     rm trash*
     
     #==============MERGE FF DATA==============================
-    cp -r $FFBASE fmo.ff/amber_mod.ff
-    cat dat/pdb/4BCL_FIX.pdb | grep ATOM > fmo.ff/4BCL_PROTEIN.pdb 
+    cp -r $FFBASE $OUTDIR/amber_mod.ff
+    cat dat/pdb/4BCL_FIX.pdb | grep ATOM > $OUTDIR/4BCL_PROTEIN.pdb 
     
-    #tail -n+30 bcl.ff/bcl.rtp >> fmo.ff/amber_mod.ff/aminoacids.rtp
-    #cat bcl.ff/bcl.rtp        > fmo.ff/amber_mod.ff/bcl.rtp
-    #cat dat/bchl.hdb             > fmo.ff/amber_mod.ff/bcl.hdb
-    cp bcl.ff/bcl_cdc.itp         fmo.ff/amber_mod.ff/bcl_cdc.itp
-    cp bcl.ff/bcl.itp             fmo.ff/amber_mod.ff/bcl.itp
-    cp bcl.ff/bcl_posre.itp       fmo.ff/amber_mod.ff/bcl_posre.itp
-    cat bcl.ff/atomtypes.atp  >>  fmo.ff/amber_mod.ff/atomtypes.atp
+    #tail -n+30 bcl.ff/bcl.rtp >> $OUTDIR/amber_mod.ff/aminoacids.rtp
+    #cat bcl.ff/bcl.rtp        > $OUTDIR/amber_mod.ff/bcl.rtp
+    #cat dat/bchl.hdb             > $OUTDIR/amber_mod.ff/bcl.hdb
+    cp bcl.ff/bcl_cdc.itp         $OUTDIR/amber_mod.ff/bcl_cdc.itp
+    cp bcl.ff/bcl.itp             $OUTDIR/amber_mod.ff/bcl.itp
+    cp bcl.ff/bcl_posre.itp       $OUTDIR/amber_mod.ff/bcl_posre.itp
+    cat bcl.ff/atomtypes.atp  >>  $OUTDIR/amber_mod.ff/atomtypes.atp
     
-    cat bcl.ff/ffbonded.itp    >> fmo.ff/amber_mod.ff/ffbonded.itp
-    cat bcl.ff/ffnonbonded.itp >> fmo.ff/amber_mod.ff/ffnonbonded.itp
+    cat bcl.ff/ffbonded.itp    >> $OUTDIR/amber_mod.ff/ffbonded.itp
+    cat bcl.ff/ffnonbonded.itp >> $OUTDIR/amber_mod.ff/ffnonbonded.itp
     
     
     #================GENERATE PROTEIN .GRO FILE AND MERGE IN BCLs=======================
-    cd fmo.ff 
+    cd $OUTDIR 
     pdb2gmx -f 4BCL_PROTEIN.pdb -o conf.pdb -ff amber_mod -chainsep id_and_ter -water tip3p -p 4BCL.top
     cat conf.pdb | grep ATOM                     > 4BCL.pdb
     cat 4BCL_BCL.pdb | grep ATOM                >> 4BCL.pdb
@@ -115,7 +116,7 @@ if [ "$1" = "BUILD" ]; then
     make_ndx -f 4BCL.gro -o index.ndx
 
 elif [ "$1" = "EQUIL" ]; then
-    cd fmo.ff
+    cd $OUTDIR
     set -o nounset
     if [ -e em ]; then
         rm -r em
@@ -132,7 +133,7 @@ elif [ "$1" = "EQUIL" ]; then
     grompp -f em/em.mdp -c 4BCL.gro -p 4BCL.top -pp 4BCL_pp.top -o trash -po trash
     rm trash*
 elif [ "$1" = "EQUIL2" ]; then 
-    cd fmo.ff
+    cd $OUTDIR
     set -o nounset
     if [ -e nvt ]; then
         rm -r nvt
