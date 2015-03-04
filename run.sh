@@ -26,7 +26,8 @@ if [ "$1" = "TEST" ]; then
     ./test_bcl_ff.sh EIG
     read -p 'Press [Enter] key to continue...'
 fi
-./build_fmo_ff.sh
+./build_fmo_ff.sh BUILD
+./build_fmo_ff.sh EQUIL
 
 
 
