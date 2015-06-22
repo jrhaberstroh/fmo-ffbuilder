@@ -4,34 +4,20 @@ import numpy as np
 import yaml
 from prm2gmx_const import *
 
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('-AMBER94prm',   required=True,  
-        help='Forcefield paramers (.prm) file for AMBER94 forcefield')
-parser.add_argument('-AMBER94tpg',   required=True,  
-        help='Forcefield topology (.tpg) file for AMBER94 forcefield')
-parser.add_argument('-GMXbonded',     required=True,
-        help='Forcefield output for GROMACS')
-parser.add_argument('-GMXnonbonded',  required=True,
-        help='Forcefield output for GROMACS')
-parser.add_argument('-GMXrtp',       required=True,
-        help='Forcefield output for GROMACS')
-parser.add_argument('-GMXatomtypes',  required=True,
-        help='Forcefield output for GROMACS')
-parser.add_argument('-suffix', default='',
-        help='Suffix to append to atomtypes')
-args = parser.parse_args()
 
 niceformat = True
 convertToTwo = False
 convertToCharmm = False
 
 addSuffix = True
-atomtypeSuffix = args.suffix
+atomtypeSuffix = "BC"
 
-kCal2kJ = 4.184 * 2.
+kCal2kJ = 4.184
 nm2A    = 10.
 VDW_scale = 2.0
+bond_scale = 2.0
+angle_scale = 2.0
+dihedral_scale = .5
 
 def set_pos(string_in, pos):
     assert pos >= len(string_in)
@@ -136,7 +122,7 @@ def bondline(line_in, precision = 6):
     line_arr = line_in.split() + [1] # Harmonic bond FF type parameter for GROMACS
        #  type  bondlen theta
     order = [2,    1,    0]
-    conv =  [1, 1./nm2A, kCal2kJ * nm2A**2]
+    conv =  [1, 1./nm2A, bond_scale * kCal2kJ * nm2A**2]
     types = [int, float, float]
     return generic_line(line_arr, 2, order, conv, types, precision = precision);
 
@@ -144,7 +130,7 @@ def bendline(line_in, precision = 6):
     line_arr = line_in.split() + [1] # Harmonic angle FF type parameter for GROMACS
        #  type   theta    force    
     order = [2,    1,       0]
-    conv =  [1.,   1.,  kCal2kJ]
+    conv =  [1.,   1.,  angle_scale * kCal2kJ]
     types = [int,  float, float]
     return generic_line(line_arr, 3, order, conv, types, precision = precision);
 
@@ -176,7 +162,7 @@ def torsionline(line_in, precision = 6, improper = False):
 
            #  type phase  force    nw
     order =    [3,   2,     0,       1]
-    units =    [1,   1.,    kCal2kJ, 1]
+    units =    [1,   1.,    dihedral_scale*kCal2kJ, 1]
     datatype = [int, float, float, int]
     entries_per_line = 4;
 
@@ -385,6 +371,41 @@ def generate_atm(tpg_filename):
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-AMBER94prm',   required=True,  
+            help='Forcefield paramers (.prm) file for AMBER94 forcefield')
+    parser.add_argument('-AMBER94tpg',   required=True,  
+            help='Forcefield topology (.tpg) file for AMBER94 forcefield')
+    parser.add_argument('-GMXbonded',     required=True,
+            help='Forcefield output for GROMACS')
+    parser.add_argument('-GMXnonbonded',  required=True,
+            help='Forcefield output for GROMACS')
+    parser.add_argument('-GMXrtp',       required=True,
+            help='Forcefield output for GROMACS')
+    parser.add_argument('-GMXatomtypes',  required=True,
+            help='Forcefield output for GROMACS')
+    parser.add_argument('-suffix', default='',
+            help='Suffix to append to atomtypes')
+    parser.add_argument('-bond_scale', type=float,
+            help='Scale for all bond energies')
+    parser.add_argument('-angle_scale', type=float,
+            help='Scale for all angle energies')
+    parser.add_argument('-dihedral_scale', type=float,
+            help='Scale for all dihedral energies')
+    parser.add_argument('-VDW_scale', type = float,
+            help='Scale for VDW length parameters')
+    args = parser.parse_args()
+
+    atomtypeSuffix = args.suffix
+    if not args.bond_scale is None:
+        bond_scale = args.bond_scale
+    if not args.angle_scale is None:
+        angle_scale = args.angle_scale
+    if not args.dihedral_scale is None:
+        dihedral_scale = args.dihedral_scale
+    if not args.VDW_scale is None:
+        VDW_scale  = args.VDW_scale
 
     if args.GMXbonded:
         ffbonded = generate_ffbonded(args.AMBER94prm)

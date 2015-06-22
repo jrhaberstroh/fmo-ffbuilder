@@ -9,6 +9,9 @@ class prmUnittests(unittest.TestCase):
         prm2gmx.addSuffix=False
         prm2gmx.VDW_scale = 1.0
         prm2gmx.kCal2kJ = 4.184
+        prm2gmx.bond_scale = 1.0
+        prm2gmx.angle_scale = 1.0
+        prm2gmx.dihedral_scale = 1.0
 
     def test_convertBondline(self):
         out = prm2gmx.bondline("nmh   mgc    50.00   2.025", precision = 6)

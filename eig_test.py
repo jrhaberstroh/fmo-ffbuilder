@@ -1,5 +1,14 @@
 import numpy as np
+from sklearn.neighbors import KernelDensity
 import matplotlib.pyplot as plt
+
+def sklearn_kde(data, x, bandwidth):
+    kernel = KernelDensity(bandwidth=bandwidth)
+    kernel.fit(data[:, np.newaxis])
+    pdf = np.exp(kernel.score_samples(x[:,np.newaxis]))
+    return pdf
+    
+    
 
 dat= np.loadtxt("bcl_test/eigenval.txt")
 print dat.shape
@@ -23,9 +32,14 @@ ev_found_ind = np.abs(ev - ev_search_val_cm).argmin()
 print "Found {}cm-1 ~ {} at index {}".format(
         ev[ev_found_ind], ev_search_val_cm, ev_num[ev_found_ind])
 
-hist, bins = np.histogram(ev, bins=200, density=True)
-plt.plot((bins[1:] + bins[:-1])/2., hist)
-plt.title("Density of states")
-plt.xlabel("hbar*w, cm-1")
-plt.ylabel("density")
+w = np.linspace(0, 4000, 1000)
+DoS = sklearn_kde(ev, w, 10.)
+plt.plot(w, DoS)
+    
+
+#hist, bins = np.histogram(ev, bins=200, density=True)
+#plt.plot((bins[1:] + bins[:-1])/2., hist)
+#plt.title("Density of states")
+#plt.xlabel("hbar*w, cm-1")
+#plt.ylabel("density")
 plt.show()

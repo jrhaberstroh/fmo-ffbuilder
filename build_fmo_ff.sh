@@ -1,15 +1,29 @@
 #!/bin/bash
 set -o errexit
+set -o nounset
 
-#FFBASE=dat/gromacs-ff/amber94.ff
-FFBASE=dat/gromacs-ff/amber99sb-ildn.ff
+echo ${1?"ERROR: No command line argument \$1. Pass BUILD or EQUIL[1/2] to build ff or equilibrate system after building."}
+
+if [[ "$1" == "-h" ]]; then
+    printf "Set FFBASE environment variable to change forcefield used (default"
+    printf " dat/gromacs-ff/amber99sb-ildn.ff)\n"
+    echo "To run: Pass BUILD or EQUIL[1/2] to build ff or equilibrate system after building."
+    echo "Preprocessed topology will be generated during EQUIL1."
+    exit 0
+fi
+
+NOSOLV=${NOSOLV+true}
+
+SRCDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+FFBASE=${FFBASE=$SRCDIR/dat/gromacs-ff/amber99sb-ildn.ff}
+OUTDIR=${OUTDIR=$SRCDIR/FMO_conf}
 
 #------------------------------------------------------------
 #               REQUIRED SOFTWARE
 #------------------------------------------------------------
 # GROMACS 4 installation
 #   pdb2gmx
-# prm2gmx.py            -- Converts .tpg and .prm AMBER94 files to gromacs
+#   grompp
 
 #------------------------------------------------------------
 #                REQUIRED FILES
@@ -23,8 +37,6 @@ FFBASE=dat/gromacs-ff/amber99sb-ildn.ff
 # dat/amber99sb-ildn.ff -- Amber99 forcefield for GROMACS
 
 if [ "$1" = "BUILD" ]; then
-    set -o nounset
-    OUTDIR=FMO_conf
     
     if [ -e $OUTDIR ]; then
         rm -r $OUTDIR
@@ -32,33 +44,35 @@ if [ "$1" = "BUILD" ]; then
     mkdir $OUTDIR
     
     # ============ADD HYDROGENS TO FMO BCL's, MOVE TO MDDIR=================
-    cat dat/bchl.hdb > bcl.ff/bcl.hdb
+    cat $SRCDIR/dat/bchl.hdb > $SRCDIR/bcl.ff/bcl.hdb
     
     # Rip BCLs out of pdb file
-    cat dat/pdb/4BCL_FIX.pdb | grep BCL > $OUTDIR/4BCL_BCL.pdb 
+    cat $SRCDIR/dat/pdb/4BCL_FIX.pdb | grep BCL > $OUTDIR/4BCL_BCL.pdb 
     pdb2gmx -ff bcl -f $OUTDIR/4BCL_BCL.pdb -o $OUTDIR/4BCL_BCL.pdb -p trash -i trash
     rm $OUTDIR/\#*
     rm trash*
     
     #==============MERGE FF DATA==============================
-    cp -r $FFBASE $OUTDIR/amber_mod.ff
-    cat dat/pdb/4BCL_FIX.pdb | grep ATOM > $OUTDIR/4BCL_PROTEIN.pdb 
+    FFNEW=$(basename ${FFBASE%.*})
+    FFNEW="$FFNEW"_mod.ff
+    cp -r $FFBASE $OUTDIR/$FFNEW
+    cat $SRCDIR/dat/pdb/4BCL_FIX.pdb | grep ATOM > $OUTDIR/4BCL_PROTEIN.pdb 
     
-    #tail -n+30 bcl.ff/bcl.rtp >> $OUTDIR/amber_mod.ff/aminoacids.rtp
-    #cat bcl.ff/bcl.rtp        > $OUTDIR/amber_mod.ff/bcl.rtp
-    #cat dat/bchl.hdb             > $OUTDIR/amber_mod.ff/bcl.hdb
-    cp bcl.ff/bcl_cdc.itp         $OUTDIR/amber_mod.ff/bcl_cdc.itp
-    cp bcl.ff/bcl.itp             $OUTDIR/amber_mod.ff/bcl.itp
-    cp bcl.ff/bcl_posre.itp       $OUTDIR/amber_mod.ff/bcl_posre.itp
-    cat bcl.ff/atomtypes.atp  >>  $OUTDIR/amber_mod.ff/atomtypes.atp
+    #tail -n+30 $SRCDIR/bcl.ff/bcl.rtp >> $OUTDIR/$FFNEW/aminoacids.rtp
+    #cat $SRCDIR/bcl.ff/bcl.rtp        > $OUTDIR/$FFNEW/bcl.rtp
+    #cat $SRCDIR/dat/bchl.hdb             > $OUTDIR/$FFNEW/bcl.hdb
+    cp $SRCDIR/bcl.ff/bcl_cdc.itp         $OUTDIR/$FFNEW/bcl_cdc.itp
+    cp $SRCDIR/bcl.ff/bcl.itp             $OUTDIR/$FFNEW/bcl.itp
+    cp $SRCDIR/bcl.ff/bcl_posre.itp       $OUTDIR/$FFNEW/bcl_posre.itp
+    cat $SRCDIR/bcl.ff/atomtypes.atp  >>  $OUTDIR/$FFNEW/atomtypes.atp
     
-    cat bcl.ff/ffbonded.itp    >> $OUTDIR/amber_mod.ff/ffbonded.itp
-    cat bcl.ff/ffnonbonded.itp >> $OUTDIR/amber_mod.ff/ffnonbonded.itp
+    cat $SRCDIR/bcl.ff/ffbonded.itp    >> $OUTDIR/$FFNEW/ffbonded.itp
+    cat $SRCDIR/bcl.ff/ffnonbonded.itp >> $OUTDIR/$FFNEW/ffnonbonded.itp
     
     
     #================GENERATE PROTEIN .GRO FILE AND MERGE IN BCLs=======================
     cd $OUTDIR 
-    pdb2gmx -f 4BCL_PROTEIN.pdb -o conf.pdb -ff amber_mod -chainsep id_and_ter -water tip3p -p 4BCL.top
+    pdb2gmx -f 4BCL_PROTEIN.pdb -o conf.pdb -ff ${FFNEW%.*} -chainsep id_and_ter -water tip3p -p 4BCL.top
     cat conf.pdb | grep ATOM                     > 4BCL.pdb
     cat 4BCL_BCL.pdb | grep ATOM                >> 4BCL.pdb
     
@@ -68,11 +82,11 @@ if [ "$1" = "BUILD" ]; then
     head -n-8 4BCL.top                                    > 4BCL_FIX.top
     echo ''                                              >> 4BCL_FIX.top
     echo '; include BCL forcefield'                      >> 4BCL_FIX.top
-    echo '#include "./amber_mod.ff/bcl.itp"'            >> 4BCL_FIX.top
+    echo "#include \"./$FFNEW/bcl.itp\""                 >> 4BCL_FIX.top
     echo ''                                              >> 4BCL_FIX.top
     echo '; include BCL position restraints'             >> 4BCL_FIX.top
     echo '#ifdef POSRES'                                 >> 4BCL_FIX.top
-    echo '#include "./amber_mod.ff/bcl_posre.itp"'      >> 4BCL_FIX.top
+    echo "#include \"./$FFNEW/bcl_posre.itp\""           >> 4BCL_FIX.top
     echo '#endif'                                        >> 4BCL_FIX.top
     tail -n8 4BCL.top                                    >> 4BCL_FIX.top
     
@@ -89,13 +103,15 @@ if [ "$1" = "BUILD" ]; then
     
     # ============RUN SIMPLE CODE====================
     
-    genbox -cp 4BCL.gro -p 4BCL.top -o 4BCL.gro -cs spc216.gro
-    grompp -f ../dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
-    genion -s temp.tpr -o 4BCL.gro -p 4BCL.top -pname NA -nname CL -neutral <<< "SOL"
-    #grompp -f ../dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
-    #trjconv -f 4BCL.gro -s temp.tpr -ur compact -o 4BCL_pbc.gro -pbc res
-    rm \#*\#
-    rm temp.tpr
+    if ! $NOSOLV; then
+        genbox -cp 4BCL.gro -p 4BCL.top -o 4BCL.gro -cs spc216.gro
+        grompp -f $SRCDIR/dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
+        genion -s temp.tpr -o 4BCL.gro -p 4BCL.top -pname NA -nname CL -neutral <<< "SOL"
+        #grompp -f $SRCDIR/dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
+        #trjconv -f 4BCL.gro -s temp.tpr -ur compact -o 4BCL_pbc.gro -pbc res
+        rm \#*\#
+        rm temp.tpr
+    fi
     
     echo ""
     echo ""
@@ -103,7 +119,7 @@ if [ "$1" = "BUILD" ]; then
     echo ""
     echo "Calling make_ndx next!!!"
     echo "INSTRUCTIONS: "
-    echo "1. When prompted, input '[Protein-index] | [BCL-index]' (e.g. '2 | 21')." 
+    echo "1. When prompted, input '[Protein-index] | [BCL-index]' (e.g. '1 | 19')." 
     echo "2. Assert that the group is called Protein_BCL"
     echo "3. Then, enter 'q' to exit."
     echo "Alternatively, if you forget these instructions, you may exit with Ctrl-C safely, rerun the script, and pay more attention"
@@ -123,7 +139,7 @@ elif [ "$1" = "EQUIL" ]; then
     fi
     mkdir em
     echo "BCL    Pigment" > residuetypes.dat
-    grompp -v -p 4BCL.top -c 4BCL.gro -f ../dat/mdp/em.mdp -o em/em -po em/em
+    grompp -v -p 4BCL.top -c 4BCL.gro -f $SRCDIR/dat/mdp/em.mdp -o em/em -po em/em
     cd em
     mdrun -v -deffnm em
     EM_PASS=$?
@@ -139,9 +155,11 @@ elif [ "$1" = "EQUIL2" ]; then
         rm -r nvt
     fi
     mkdir nvt
-    grompp -v -p 4BCL.top -c em/em.gro -f ../dat/mdp/nvt.mdp -o nvt/nvt -po nvt/nvt -n index.ndx
+    grompp -v -p 4BCL.top -c em/em.gro -f $SRCDIR/dat/mdp/nvt.mdp -o nvt/nvt -po nvt/nvt -n index.ndx
     cd nvt
     mdrun -v -deffnm nvt
 else
-    echo "Pass BUILD or EQUIL to run ff building or system equilibration"
+    echo "ERROR: Bad command line argument"
+    echo "Pass BUILD or EQUIL[1/2] to run ff building or system equilibration"
+    exit 1
 fi
