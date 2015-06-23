@@ -32,6 +32,7 @@ if [ -e $SRCDIR/bcl.ff ]; then
     rm -r $SRCDIR/bcl.ff
 fi
 mkdir $SRCDIR/bcl.ff
+cd $SRCDIR
 python $SRCDIR/prm2gmx.py -AMBER94prm $SRCDIR/dat/BCHL.prm \
     -AMBER94tpg $SRCDIR/dat/BCHL.tpg \
     -GMXbonded    $SRCDIR/bcl.ff/ffbonded.itp \
@@ -39,14 +40,17 @@ python $SRCDIR/prm2gmx.py -AMBER94prm $SRCDIR/dat/BCHL.prm \
     -GMXrtp       $SRCDIR/bcl.ff/bcl.rtp \
     -GMXatomtypes $SRCDIR/bcl.ff/atomtypes.atp \
     -suffix QL -bond_scale 2.0 -angle_scale 2.0 -dihedral_scale .5
+cd -
 
 # ============GENERATE THE ITP==========================
 # Generate the single-molecule ITP for the base pararmeters
 cp $SRCDIR/dat/forcefield.itp $SRCDIR/bcl.ff/.
 echo "BCL    BCL" > $SRCDIR/residuetypes.dat
 # Create the .top file
+cd $SRCDIR
 $PDB2GMX -ff bcl -f $SRCDIR/dat/bchl.gro -o $SRCDIR/bcl.ff/bcl.gro \
                 -p $SRCDIR/bcl.ff/bcl.top -i $SRCDIR/bcl.ff/bcl_posre.itp
+cd -
 # Create the .itp file by cutting the top and bottom off of the .top
 tail -n+21 $SRCDIR/bcl.ff/bcl.top | head -n-12 >> $SRCDIR/bcl.ff/bcl.itp
 cp $SRCDIR/bcl.ff/bcl.top $SRCDIR/bcl.ff/bcl_cdc.top
@@ -81,12 +85,12 @@ tail -n+21 $SRCDIR/bcl.ff/bcl_cdc.top | head -n-12 >> $SRCDIR/bcl.ff/bcl_cdc.itp
 rm $SRCDIR/bcl.ff/bcl_cdc.top
 
 # ====================TEST THE TOPOLOGY =============================
-cp $SRCDIR/bcl.ff/bcl.top .
-cp $SRCDIR/bcl.ff/bcl.gro .
+cp $SRCDIR/bcl.ff/bcl.gro $SRCDIR/.
+cp $SRCDIR/bcl.ff/bcl.top $SRCDIR/.
+cd $SRCDIR
 $GROMPP -f $SRCDIR/dat/mdp/em.mdp -c $SRCDIR/bcl.gro -p $SRCDIR/bcl.top -o $SRCDIR/trash -po $SRCDIR/trash
+cd -
+rm $SRCDIR/bcl.gro
+rm $SRCDIR/bcl.top
 rm $SRCDIR/trash*
 rm $SRCDIR/residuetypes.dat
-rm $SRCDIR/bcl.top
-rm $SRCDIR/bcl.gro
-
-

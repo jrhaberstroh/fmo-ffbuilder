@@ -2,13 +2,13 @@
 set -o errexit
 set -o nounset
 
-echo ${1?"ERROR: No command line argument \$1. Pass BUILD or EQUIL[1/2] to build ff or equilibrate system after building."}
+echo ${1?"ERROR: No command line argument \$1. Pass BUILD or EQUIL[ /2] to build ff or equilibrate system after building."}
 
 if [[ "$1" == "-h" ]]; then
     printf "Set FFBASE environment variable to change forcefield used (default"
     printf " dat/gromacs-ff/amber99sb-ildn.ff)\n"
-    echo "To run: Pass BUILD or EQUIL[1/2] to build ff or equilibrate system after building."
-    echo "Preprocessed topology will be generated during EQUIL1."
+    echo "To run: Pass BUILD or EQUIL[ /2] to build ff or equilibrate system after building."
+    echo "Preprocessed topology will be generated during EQUIL."
     exit 0
 fi
 
@@ -17,6 +17,7 @@ NOSOLV=${NOSOLV+true}
 SRCDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 FFBASE=${FFBASE=$SRCDIR/dat/gromacs-ff/amber99sb-ildn.ff}
 OUTDIR=${OUTDIR=$SRCDIR/FMO_conf}
+OUTDIR=$(realpath $OUTDIR)
 
 #------------------------------------------------------------
 #               REQUIRED SOFTWARE
@@ -48,9 +49,11 @@ if [ "$1" = "BUILD" ]; then
     
     # Rip BCLs out of pdb file
     cat $SRCDIR/dat/pdb/4BCL_FIX.pdb | grep BCL > $OUTDIR/4BCL_BCL.pdb 
+    cd $SRCDIR
     pdb2gmx -ff bcl -f $OUTDIR/4BCL_BCL.pdb -o $OUTDIR/4BCL_BCL.pdb -p trash -i trash
     rm $OUTDIR/\#*
     rm trash*
+    cd -
     
     #==============MERGE FF DATA==============================
     FFNEW=$(basename ${FFBASE%.*})
@@ -129,7 +132,7 @@ if [ "$1" = "BUILD" ]; then
     echo ""
     read -n1 -r -p "Press any key to continue... (where's the any key?)" key
     
-    make_ndx -f 4BCL.gro -o index.ndx
+    make_ndx -f 4BCL.gro -o index.ndx 2> /dev/null
 
 elif [ "$1" = "EQUIL" ]; then
     cd $OUTDIR
@@ -160,6 +163,6 @@ elif [ "$1" = "EQUIL2" ]; then
     mdrun -v -deffnm nvt
 else
     echo "ERROR: Bad command line argument"
-    echo "Pass BUILD or EQUIL[1/2] to run ff building or system equilibration"
+    echo "Pass BUILD or EQUIL[ /2] to run ff building or system equilibration"
     exit 1
 fi
