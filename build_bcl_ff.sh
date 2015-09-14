@@ -63,11 +63,11 @@ cp $SRCDIR/bcl.ff/bcl.top $SRCDIR/bcl.ff/bcl_cdc.top
 #   Set their charge to 0.000
 sed -i "/^.*BCL\s\+H\S*[A-Z].*/ s/\(^.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1 0.000 \t\3 ;/" \
         $SRCDIR/bcl.ff/bcl_cdc.top
-# Extra regex for remaining hydrogens, between lines of 110 and 121
-#   Set their charge to 0.000
-sed -i '110,121 s/\S\+[0-9]\s\+\(\S\+[0-9]\)\s\+;.*/\t0.000  \t\1\t ;/' \
-        $SRCDIR/bcl.ff/bcl_cdc.top
 sed -i "/BCL/ s/BCL/BCX/" $SRCDIR/bcl.ff/bcl_cdc.top
+# Extra regex for remaining hydrogens, between lines of 110 and 121
+#   Set their charge to 0.000 (count 3 cols past BCX)
+sed -i '110,121 s/\(BCX\s\+\S\+\s\+\S\+\s\+\)\S\+/\1 0.000/' \
+        $SRCDIR/bcl.ff/bcl_cdc.itp
 
 # Insert the CDC charges with sed
 while read p ; do
@@ -78,8 +78,11 @@ while read p ; do
     # i.e. Create the GROMACS forcefield with the CDC charges 
     sed -i "/^.*BCL .* $atomname / s/\(^.*\s\)\(\S\+\)\(.*[0-9]\+.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1\2\3$q_gd \t\5 \t\2 \t$q_ex\t\5 ;/" $SRCDIR/bcl.ff/bcl_cdc.top
 done < $SRCDIR/dat/bchl_cdc.txt
-# Uncomment to use BCX name instead of BCL
-#sed -i 's/BCL/BCX/g' bcl.ff/bcl_cdc.top
+
+# Extra regex for remaining hydrogens, between lines of 110 and 121
+#   Set their charge to 0.000 (count 3 cols past BCX)
+sed -i '102,147 s/\(BCX\s\+\S\+\s\+\S\+\s\+\)\S\+/\1 0.000/' \
+        $SRCDIR/bcl.ff/bcl_cdc.itp
 
 tail -n+21 $SRCDIR/bcl.ff/bcl_cdc.top | head -n-12 >> $SRCDIR/bcl.ff/bcl_cdc.itp
 rm $SRCDIR/bcl.ff/bcl_cdc.top
