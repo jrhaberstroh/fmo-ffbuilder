@@ -12,7 +12,7 @@ if [[ "$1" == "-h" ]]; then
     exit 0
 fi
 
-NOSOLV=${NOSOLV-false}
+NOSOLV=${NOSOLV+true}
 
 SRCDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 FFBASE=${FFBASE=$SRCDIR/dat/gromacs-ff/amber99sb-ildn.ff}
@@ -106,7 +106,7 @@ if [ "$1" = "BUILD" ]; then
     
     # ============RUN SIMPLE CODE====================
     
-    if [ "$NOSOLV" = false ] ; then
+    if ! $NOSOLV; then
         genbox -cp 4BCL.gro -p 4BCL.top -o 4BCL.gro -cs spc216.gro
         grompp -f $SRCDIR/dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
         genion -s temp.tpr -o 4BCL.gro -p 4BCL.top -pname NA -nname CL -neutral <<< "SOL"
