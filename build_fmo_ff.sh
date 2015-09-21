@@ -2,22 +2,27 @@
 set -o errexit
 set -o nounset
 
-echo ${1?"ERROR: No command line argument \$1. Pass BUILD or EQUIL[ /2] to build ff or equilibrate system after building."}
+SRCDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+FFBASE=${FFBASE=$SRCDIR/dat/gromacs-ff/amber99sb-ildn.ff}
+RUNMODE=${1--h}
+SOLVATE=${SOLVATE-true}
+OUTDIR=${OUTDIR=$SRCDIR/FMO_conf}
+OUTDIR=$(realpath $OUTDIR)
 
-if [[ "$1" == "-h" ]]; then
-    printf "Set FFBASE environment variable to change forcefield used (default"
-    printf " dat/gromacs-ff/amber99sb-ildn.ff)\n"
-    echo "To run: Pass BUILD or EQUIL[ /2] to build ff or equilibrate system after building."
+if [[ "$RUNMODE" == "-h" ]]; then
+    echo "----------------------"
+    echo "build_fmo_ff.sh"
+    echo "----------------------"
+    echo "Pass \$1 as BUILD, EQUIL, or EQUIL2."
     echo "Preprocessed topology will be generated during EQUIL."
+    echo ""
+    echo "Options: SOLVATE  - ($SOLVATE) generate solvent around the FMO complex"
+    echo "Options: OUTDIR - ($OUTDIR) location to write FMO forcefield"
+    echo "Options: FFBASE - ($FFBASE) location of base FMO forcefield"
     exit 0
 fi
 
-NOSOLV=${NOSOLV+true}
 
-SRCDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-FFBASE=${FFBASE=$SRCDIR/dat/gromacs-ff/amber99sb-ildn.ff}
-OUTDIR=${OUTDIR=$SRCDIR/FMO_conf}
-OUTDIR=$(realpath $OUTDIR)
 
 #------------------------------------------------------------
 #               REQUIRED SOFTWARE
@@ -37,7 +42,7 @@ OUTDIR=$(realpath $OUTDIR)
 # dat/bcl.hdb           -- BChl hydrogen-file for GROMCAS, used for 4BCL pdb
 # dat/amber99sb-ildn.ff -- Amber99 forcefield for GROMACS
 
-if [ "$1" = "BUILD" ]; then
+if [ "$RUNMODE" = "BUILD" ]; then
     
     if [ -e $OUTDIR ]; then
         rm -r $OUTDIR
@@ -106,35 +111,37 @@ if [ "$1" = "BUILD" ]; then
     
     # ============RUN SIMPLE CODE====================
     
-    if ! $NOSOLV; then
+    if $SOLVATE; then
         genbox -cp 4BCL.gro -p 4BCL.top -o 4BCL.gro -cs spc216.gro
         grompp -f $SRCDIR/dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
-        genion -s temp.tpr -o 4BCL.gro -p 4BCL.top -pname NA -nname CL -neutral <<< "SOL"
-        #grompp -f $SRCDIR/dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
-        #trjconv -f 4BCL.gro -s temp.tpr -ur compact -o 4BCL_pbc.gro -pbc res
+        genion -s temp.tpr -o 4BCL.gro -p 4BCL.top \
+            -pname NA -nname CL -neutral <<< "SOL"
+        # grompp -f $SRCDIR/dat/mdp/ions.mdp -c 4BCL.gro -p 4BCL.top -o temp.tpr
+        # trjconv -f 4BCL.gro -s temp.tpr -ur compact -o 4BCL_pbc.gro -pbc res <<< "System"
         rm \#*\#
         rm temp.tpr
     fi
-    
-    echo ""
-    echo ""
-    echo ""
-    echo ""
-    echo "Calling make_ndx next!!!"
-    echo "INSTRUCTIONS: "
-    echo "1. When prompted, input '[Protein-index] | [BCL-index]' (e.g. '1 | 19')." 
-    echo "2. Assert that the group is called Protein_BCL"
-    echo "3. Then, enter 'q' to exit."
-    echo "Alternatively, if you forget these instructions, you may exit with Ctrl-C safely, rerun the script, and pay more attention"
-    echo ""
-    echo ""
-    echo ""
-    echo ""
-    read -n1 -r -p "Press any key to continue... (where's the any key?)" key
-    
-    make_ndx -f 4BCL.gro -o index.ndx 2> /dev/null
 
-elif [ "$1" = "EQUIL" ]; then
+    # Create the index groups for:
+    #   1. Protein + BCL    
+    #   2. Each individual BCL
+    make_ndx -f 4BCL.gro -o temp.ndx 2> /dev/null <<Protein_BCL
+q
+Protein_BCL
+    BCL_IND=$(cat temp.ndx | grep "\[" | grep -n "\[ BCL \]" | head -n1 | cut -f1 -d':')
+    echo "Index for BCL group: "$BCL_IND 
+    BCL_IND=$(( BCL_IND - 1 ))
+    echo "Index for BCL group: "$BCL_IND 
+    make_ndx -f 4BCL.gro -n temp.ndx -o index.ndx 2> /dev/null <<BCL_Groups
+"Protein" | $BCL_IND
+splitres $BCL_IND
+q
+BCL_Groups
+    echo "Index for BCL group: "$BCL_IND 
+    rm temp.ndx
+    
+
+elif [ "$RUNMODE" = "EQUIL" ]; then
     cd $OUTDIR
     set -o nounset
     if [ -e em ]; then
@@ -151,7 +158,7 @@ elif [ "$1" = "EQUIL" ]; then
     trjconv -f em/em.trr -s em/em.tpr -o em/em_vid.gro -pbc res -ur compact -n index.ndx <<< "System"
     grompp -f em/em.mdp -c 4BCL.gro -p 4BCL.top -pp 4BCL_pp.top -o trash -po trash
     rm trash*
-elif [ "$1" = "EQUIL2" ]; then 
+elif [ "$RUNMODE" = "EQUIL2" ]; then 
     cd $OUTDIR
     set -o nounset
     if [ -e nvt ]; then
