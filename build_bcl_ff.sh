@@ -59,28 +59,50 @@ cp $SRCDIR/bcl.ff/bcl.top $SRCDIR/bcl.ff/bcl_cdc.top
 
 # Zero all of the hydrogen charges for the CDC file
 cp $SRCDIR/bcl.ff/bcl.top $SRCDIR/bcl.ff/bcl_cdc.top
-# Find all lines in the topology file of atomname H*** in BCL (appx regex "BCL \s+ H"):
-#   Set their charge to 0.000
-sed -i "/^.*BCL\s\+H\S*[A-Z].*/ s/\(^.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1 0.000 \t\3 ;/" \
-        $SRCDIR/bcl.ff/bcl_cdc.top
-# Extra regex for remaining hydrogens, between lines of 110 and 121
-#   Set their charge to 0.000
-sed -i '110,121 s/\S\+[0-9]\s\+\(\S\+[0-9]\)\s\+;.*/\t0.000  \t\1\t ;/' \
-        $SRCDIR/bcl.ff/bcl_cdc.top
-sed -i "/BCL/ s/BCL/BCX/" $SRCDIR/bcl.ff/bcl_cdc.top
+ROWMATCH="/^\s\+[0-9]\+.*BCL\s\+/"
+for col in {49..56}; do
+    sed -i "$ROWMATCH s/./ /$col" $SRCDIR/bcl.ff/bcl_cdc.top
+done
 
-# Insert the CDC charges with sed
+HROWMATCH="/^\s\+[0-9]\+.*BCL\s\+H\S\+/"
+sed -i "$HROWMATCH  s/./0/52" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$HROWMATCH s/./\./53" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$HROWMATCH  s/./0/54" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$HROWMATCH  s/./0/55" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$HROWMATCH  s/./0/56" $SRCDIR/bcl.ff/bcl_cdc.top
+
+CTAILROWMATCH="/^\s\+[0-9]\+.*BCL\s\+C[12][0-9]\s/"
+sed -i "$CTAILROWMATCH  s/./0/52" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$CTAILROWMATCH s/./\./53" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$CTAILROWMATCH  s/./0/54" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$CTAILROWMATCH  s/./0/55" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$CTAILROWMATCH  s/./0/56" $SRCDIR/bcl.ff/bcl_cdc.top
+
+CTAILROWMATCH="/^\s\+[0-9]\+.*BCL\s\+C[2-9]\s/"
+sed -i "$CTAILROWMATCH  s/./0/52" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$CTAILROWMATCH s/./\./53" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$CTAILROWMATCH  s/./0/54" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$CTAILROWMATCH  s/./0/55" $SRCDIR/bcl.ff/bcl_cdc.top
+sed -i "$CTAILROWMATCH  s/./0/56" $SRCDIR/bcl.ff/bcl_cdc.top
+
 while read p ; do
     atomname=$(echo $p | cut -d" " -f2 )
     q_gd=$(echo $p | cut -d" " -f7)
     q_ex=$(echo $p | cut -d" " -f8)
-    # Modify all lines with the strings "BCL" "$atomname" on them with the parameters from BCHL_charges.txt
+    q_gap=$(echo "$q_gd - $q_ex" | bc)
+    q_gap_str=$(printf "%+05.3f" $q_gap | sed "s/+/ /")
+    # Modify all lines with the strings "BCL" "$atomname" on them
     # i.e. Create the GROMACS forcefield with the CDC charges 
-    sed -i "/^.*BCL .* $atomname / s/\(^.*\s\)\(\S\+\)\(.*[0-9]\+.*BCL\s\+\S\+\s\+[0-9]\+\s\+\)\(\S\+[0-9]\s\+\)\(\S\+[0-9]\).*;.*/\1\2\3$q_gd \t\5 \t\2 \t$q_ex\t\5 ;/" $SRCDIR/bcl.ff/bcl_cdc.top
+    ATOMROWMATCH="/^\s\+[0-9]\+.*BCL\s\+$atomname /"
+    echo $ATOMROWMATCH, $q_gap_str
+    for i in {0..5}; do
+        POS=$(( 51 + $i ))
+        sed -i "$ATOMROWMATCH s/./${q_gap_str:$i:1}/$POS" $SRCDIR/bcl.ff/bcl_cdc.top
+    done
 done < $SRCDIR/dat/bchl_cdc.txt
-# Uncomment to use BCX name instead of BCL
-#sed -i 's/BCL/BCX/g' bcl.ff/bcl_cdc.top
 
+# # Uncomment to use BCX name instead of BCL
+sed -i 's/BCL/BCX/g' bcl.ff/bcl_cdc.top
 tail -n+21 $SRCDIR/bcl.ff/bcl_cdc.top | head -n-12 >> $SRCDIR/bcl.ff/bcl_cdc.itp
 rm $SRCDIR/bcl.ff/bcl_cdc.top
 
