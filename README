@@ -1,14 +1,42 @@
-====================================================================================================
+========================================
 prm2gmx
-====================================================================================================
-
+========================================
 prm2gmx converts the data from the Marchi Forcefield (2002) for BChl into a gromacs-compatible style.
 
 
-
 How to use
-====================================================================================================
+========================================
+    1) Create a directory "dat". 
+    2) Add the following required files to the dat directory:
+# dat/bchl.tpg          -- AMBER94 forcefield params for BChl
+# dat/bchl.prm          -- AMBER94 forcefield params for BChl
+# dat/bchl.gro          -- One BChl molecule atomic positions
+# dat/bchl_cdc.txt      -- CDC charges for BChl (from Madjet et al, 2006)
+# dat/forcefield.itp    -- Forcefield header from GROMACS forcefield that matches the forcefield being used
+# dat/pdb/4BCL_FIX.pdb  -- 4BCL pdb file, with all appropriate fixes
+# dat/bcl.hdb           -- BChl hydrogen-file for GROMCAS, used for 4BCL pdb
+    3) ./build_bcl_ff.sh (generates bcl.ff directory)
+    4) Ensure the existence of the following files:
+# bcl.ff/bcl_cdc.itp
+# bcl.ff/bcl.itp
+# bcl.ff/bcl_posre.itp
+# bcl.ff/atomtypes.atp
+# bcl.ff/ffbonded.itp
+# bcl.ff/ffnonbonded.itp
+# dat/pdb/4BCL_FIX.pdb   -- 4BCL pdb file 
+# dat/bcl.hdb            -- BChl hydrogen-file for GROMCAS, used for 4BCL pdb
+# dat/forcefield.itp     -- Forcefield header from GROMACS matching forcefield used
+    5) Add the following files to the dat directory:
+# dat/gromacs-ff/amber99sb-ildn.ff -- Amber99 forcefield for GROMACS
+    6) ./build_fmo_ff.sh BUILD (generates FMO_conf directory)
+    7) ./build_fmo_ff.sh EQUIL (generates FMO_conf/em directory for energy minimization)
+    8) ./build_fmo_ff.sh EQUIL2 (gnerates FMO_conf/nvt directory for initial thermalization)
+    9) Pray as needed
 
+
+
+Description
+========================================
 Putting new atomtypes into gromacs is not a trivial procedure. Because the data is provided in a more
 generic format (i.e. in a format of atomtypes, bonded names, and bond descriptions), the data must be
 run through pdb2gmx to generate a self-sufficient .itp file.
@@ -19,16 +47,20 @@ the molecule. Alternatively, the parameters can be added to an existing forcefie
 macromolecule can be run through pdb2gmx to generate the .itp files on the fly.
 
 There are several files which must be modified to successfully generate the topology with pdb2gmx:
-    1) atomtypes.atm - Atom types (of any length), with masses
-    2) ffbonded.itp - Valence bond parameters between atomtypes for generic ff generation (bond, 
+    * atomtypes.atm - Atom types (of any length), with masses
+    * ffbonded.itp - Valence bond parameters between atomtypes for generic ff generation (bond, 
         angle, dihedral, and improper dihedral)
-    3) ffnonbonded.itp - Non-bonded parameters for atomtypes in atomtypes.atm (atomic number, 
+    * ffnonbonded.itp - Non-bonded parameters for atomtypes in atomtypes.atm (atomic number, 
         mass, default charge (conventionally zero), sigma, and epsilon
-    4) bcl.rtp - Describes the map from redundant atomtypes to unique atomnames in residue [BCL], 
+    * bcl.rtp - Describes the map from redundant atomtypes to unique atomnames in residue [BCL], 
         the charges and charge groups, then specifies the bonds, angles, dihedrals, and impropers 
         topology for the molecule
-    5) bcl.hdb - Describes the location of hydrogens for pdb2gmx to generate and their proper
+    * bcl.hdb - Describes the location of hydrogens for pdb2gmx to generate and their proper
         structure. (I think that ambertools can do this automatically, though...)
 
 Using these, it should be possible to successfully run pdb2gmx and generate a .itp file for BCL,
 which can then be updated to include type A and type B charge densities for free-energy calculations.
+
+
+
+
