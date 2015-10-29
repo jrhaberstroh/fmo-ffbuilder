@@ -45,7 +45,7 @@ How to use
 # dat/forcefield.itp    -- Forcefield header from GROMACS forcefield that matches the forcefield being used
 # dat/pdb/4BCL_FIX.pdb  -- 4BCL pdb file, with all appropriate fixes
 # dat/bcl.hdb           -- BChl hydrogen-file for GROMCAS, used for 4BCL pdb
-    3) Run build_bcl_ff.sh to generate bcl.ff directory
+    3) ./build_bcl_ff.sh (generates bcl.ff directory)
     4) Ensure the existence of the following files:
 # bcl.ff/bcl_cdc.itp
 # bcl.ff/bcl.itp
@@ -58,7 +58,7 @@ How to use
 # dat/forcefield.itp     -- Forcefield header from GROMACS matching forcefield used
     5) Add the following files to the dat directory:
 # dat/gromacs-ff/amber99sb-ildn.ff -- Amber99 forcefield for GROMACS
-    6) Run build_fmo_ff.sh BUILD
-    7) Run build_fmo_ff.sh EQUIL
-    8) Run build_fmo_ff.sh EQUIL2
-    9) Pray
+    6) ./build_fmo_ff.sh BUILD (generates FMO_conf directory)
+    7) ./build_fmo_ff.sh EQUIL (generates FMO_conf/em directory for energy minimization)
+    8) ./build_fmo_ff.sh EQUIL2 (gnerates FMO_conf/nvt directory for initial thermalization)
+    9) Pray as needed
