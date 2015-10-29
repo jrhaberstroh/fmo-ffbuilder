@@ -1,0 +1,5 @@
+integrator      = nm
+
+cutoff-scheme   = group
+pbc             = no
+coulombtype     = Shift

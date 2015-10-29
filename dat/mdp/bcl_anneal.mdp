@@ -1,0 +1,21 @@
+integrator      = md
+nsteps          = 110000
+nstcomm         = 100
+nstxout         = 100
+comm-mode       = Angular
+
+gen-vel         = yes
+gen-temp        = 300
+
+tcoupl          = v-rescale
+nsttcouple      = 100
+tau-t           = 1
+ref-t           = 300
+tc-grps         = System
+
+annealing       = single
+annealing-npoints = 4
+annealing-time  =   0  50 100 110
+annealing-temp  = 300 300   0   0
+
+pbc             = no
