@@ -37,10 +37,10 @@ fi
 # dat/bchl.tpg          -- AMBER94 forcefield params for BChl
 # dat/bchl.prm          -- AMBER94 forcefield params for BChl
 # dat/bchl.gro          -- One BChl molecule
-# dat/forcefield.itp    -- Forcefield header from GROMACS
 # dat/pdb/4BCL_FIX.pdb  -- 4BCL pdb file 
 # dat/bcl.hdb           -- BChl hydrogen-file for GROMCAS, used for 4BCL pdb
-# dat/amber99sb-ildn.ff -- Amber99 forcefield for GROMACS
+# dat/forcefield.itp    -- Forcefield header from GROMACS matching forcefield used
+# dat/gromacs-ff/amber99sb-ildn.ff -- Amber99 forcefield for GROMACS
 
 if [ "$RUNMODE" = "BUILD" ]; then
     
